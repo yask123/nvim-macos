@@ -30,6 +30,7 @@ if ! nvim --headless "+Lazy! restore" "+qa" >"$restore_log" 2>&1; then
   exit 1
 fi
 nvim --headless "+luafile $test_config/tests/smoke.lua" "+qa"
+printf '\n'
 
 if ! cmp -s "$repo_root/lazy-lock.json" "$test_config/lazy-lock.json"; then
   printf 'Fresh restore changed lazy-lock.json:\n' >&2
