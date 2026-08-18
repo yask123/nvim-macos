@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install test tools
         run: brew install neovim ripgrep fd fzf lazygit tree-sitter-cli shellcheck shfmt stylua node python uv lua
       - name: Check shell scripts
