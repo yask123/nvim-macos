@@ -161,6 +161,11 @@ if [[ -z "$staged_config" ]]; then
   git -C "$staged_config" remote set-url origin "$repo_url"
 fi
 
+if pgrep -x nvim >/dev/null 2>&1; then
+  printf 'Neovim is running. Save your work, quit every Neovim process, and rerun the installer.\n' >&2
+  exit 1
+fi
+
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup_parent="$state_home/nvim-bootstrap/backups"
 backup_root=""
@@ -200,11 +205,11 @@ if [[ $skip_plugins -eq 0 ]]; then
     "+qa"
 fi
 
-doctor_args=()
 if [[ $skip_plugins -eq 1 ]]; then
-  doctor_args+=(--skip-plugins)
+  "$target_config/scripts/doctor.sh" --skip-plugins
+else
+  "$target_config/scripts/doctor.sh"
 fi
-"$target_config/scripts/doctor.sh" "${doctor_args[@]}"
 
 printf '\nNeovim is ready. Launch it with: nvim\n'
 printf 'For matching icons, choose JetBrains Mono plus 0xProto Nerd Font fallback in your terminal.\n'

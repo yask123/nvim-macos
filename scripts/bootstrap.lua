@@ -28,7 +28,8 @@ local finished = vim.wait(300000, function()
     return true
   end
   for name in pairs(wanted) do
-    if not registry.get_package(name):is_installed() then
+    local package = registry.get_package(name)
+    if package:is_installing() or not package:is_installed() then
       return false
     end
   end

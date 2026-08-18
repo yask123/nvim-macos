@@ -29,6 +29,7 @@ if ! nvim --headless "+Lazy! restore" "+qa" >"$restore_log" 2>&1; then
   tail -n 200 "$restore_log" >&2
   exit 1
 fi
+nvim -u NONE --headless -l "$test_config/tests/treesitter.lua"
 nvim --headless "+luafile $test_config/tests/smoke.lua" "+qa"
 printf '\n'
 

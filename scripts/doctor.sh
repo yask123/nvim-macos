@@ -125,6 +125,12 @@ elif command -v nvim >/dev/null 2>&1 && [[ -f "$config_dir/init.lua" ]]; then
     fail "Neovim startup failed: $startup_output"
   fi
 
+  if treesitter_output="$(NVIM_DOCTOR=1 NVIM_MASON_AUTO_INSTALL=0 nvim --headless "+Lazy! load nvim-treesitter" "+lua assert(vim.treesitter.language.add('vim') ~= false, 'Vim parser unavailable'); local ok, query=pcall(vim.treesitter.query.get, 'vim', 'highlights'); assert(ok, query); assert(query, 'Vim highlight query unavailable'); local tab_ok, tab_error=pcall(vim.treesitter.query.parse, 'vim', [[\"tab\" @keyword]]); assert(tab_ok, tab_error); print('treesitter ok')" "+qa" 2>&1)"; then
+    ok "Treesitter Vim parser/query compatibility"
+  else
+    fail "Treesitter Vim parser/query mismatch: $treesitter_output"
+  fi
+
   if mason_output="$(NVIM_DOCTOR=1 NVIM_MASON_AUTO_INSTALL=0 nvim --headless "+Lazy! load mason.nvim" "+lua local r=require('mason-registry'); local names={'basedpyright','black','json-lsp','lua-language-server','prettier','ruff','shfmt','stylua','vtsls'}; local missing={}; for _,n in ipairs(names) do if not r.is_installed(n) then table.insert(missing,n) end end; assert(#missing == 0, 'missing Mason tools: '..table.concat(missing, ', ')); print('mason ok')" "+qa" 2>&1)"; then
     ok "Mason language and formatting tools"
   else
