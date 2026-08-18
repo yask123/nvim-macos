@@ -1,0 +1,7 @@
+.DS_Store
+.claude/
+.cursor/
+.repro/
+.tests/
+*.log
+doc/tags

@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: brew install neovim shellcheck stylua
+      - name: Check shell scripts
+        run: shellcheck install.sh scripts/*.sh tests/*.sh
+      - name: Check Lua formatting
+        run: stylua --check lua tests
+      - name: Run isolated Neovim smoke test
+        run: ./tests/isolated.sh
