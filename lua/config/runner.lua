@@ -72,7 +72,7 @@ function M.command_for(file, filetype)
   elseif filetype == "javascript" or filetype == "javascriptreact" then
     return { "node", file }, cwd
   elseif filetype == "typescript" or filetype == "typescriptreact" then
-    return { "npx", "--yes", "tsx", file }, cwd
+    return { "npx", "--yes", "tsx@4.19.3", file }, cwd
   elseif filetype == "lua" then
     return { "lua", file }, cwd
   elseif filetype == "sh" then
@@ -104,8 +104,6 @@ local function output_lines(result)
 end
 
 function M.run()
-  vim.cmd.write()
-
   local file = vim.api.nvim_buf_get_name(0)
   local command, cwd, err = M.command_for(file, vim.bo.filetype)
   if not command then
@@ -116,6 +114,8 @@ function M.run()
     vim.notify("Runner executable not found: " .. command[1], vim.log.levels.ERROR)
     return
   end
+
+  vim.cmd.write()
 
   M.close()
   show_output({ "Running…" }, "Output")

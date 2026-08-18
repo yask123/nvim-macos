@@ -7,6 +7,7 @@ repo_ref="${NVIM_BOOTSTRAP_REF:-main}"
 skip_brew=0
 skip_plugins=0
 temporary_root=""
+user_home="${HOME:?HOME is not set}"
 
 usage() {
   cat <<'EOF'
@@ -62,7 +63,7 @@ load_brew() {
 }
 
 load_brew
-if [[ $skip_brew -eq 0 && ! $(command -v brew) ]]; then
+if [[ $skip_brew -eq 0 ]] && ! command -v brew >/dev/null 2>&1; then
   printf 'Homebrew is not installed; starting the official installer.\n'
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   load_brew
@@ -84,22 +85,57 @@ if [[ -n "$script_source" && -f "$script_source" ]]; then
 fi
 
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/nvim-bootstrap.XXXXXX")"
+staged_config=""
 if [[ -z "$source_dir" ]]; then
-  source_dir="$temporary_root/source"
+  staged_config="$temporary_root/source"
   printf 'Fetching %s (%s)…\n' "$repo_url" "$repo_ref"
-  git clone --quiet --depth 1 --branch "$repo_ref" "$repo_url" "$source_dir"
+  git clone --quiet --depth 1 --branch "$repo_ref" "$repo_url" "$staged_config"
+  source_dir="$staged_config"
 fi
+
+font_file_exists() {
+  local pattern="$1"
+  local font_dir
+  local match
+  for font_dir in "$user_home/Library/Fonts" /Library/Fonts; do
+    [[ -d "$font_dir" ]] || continue
+    match="$(find "$font_dir" -maxdepth 1 -type f -iname "$pattern" -print -quit 2>/dev/null)"
+    if [[ -n "$match" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+append_cask_skip() {
+  local name="$1"
+  case " $cask_skip " in
+    *" $name "*) ;;
+    *) cask_skip="${cask_skip:+$cask_skip }$name" ;;
+  esac
+}
 
 if [[ $skip_brew -eq 0 ]]; then
   if ! command -v brew >/dev/null 2>&1; then
     printf 'Homebrew installation did not become available in PATH.\n' >&2
     exit 1
   fi
+
+  cask_skip="${HOMEBREW_BUNDLE_CASK_SKIP:-}"
+  if ! brew list --cask font-jetbrains-mono >/dev/null 2>&1 && font_file_exists '*JetBrainsMono*'; then
+    append_cask_skip font-jetbrains-mono
+  fi
+  if ! brew list --cask font-0xproto-nerd-font >/dev/null 2>&1 && font_file_exists '*0xProto*'; then
+    append_cask_skip font-0xproto-nerd-font
+  fi
+  if [[ "$cask_skip" != "${HOMEBREW_BUNDLE_CASK_SKIP:-}" ]]; then
+    printf 'Matching manually installed fonts found; keeping them in place.\n'
+  fi
+
   printf 'Installing command-line tools and fonts…\n'
-  brew bundle --file="$source_dir/Brewfile"
+  HOMEBREW_BUNDLE_CASK_SKIP="$cask_skip" brew bundle install --no-upgrade --file="$source_dir/Brewfile"
 fi
 
-user_home="${HOME:?HOME is not set}"
 config_home="${XDG_CONFIG_HOME:-$user_home/.config}"
 data_home="${XDG_DATA_HOME:-$user_home/.local/share}"
 state_home="${XDG_STATE_HOME:-$user_home/.local/state}"
@@ -119,18 +155,25 @@ for target in "$target_config" "$target_data" "$target_state" "$target_cache"; d
   esac
 done
 
-staged_config="$temporary_root/nvim"
-git clone --quiet --branch "$repo_ref" "$repo_url" "$staged_config"
+if [[ -z "$staged_config" ]]; then
+  staged_config="$temporary_root/nvim"
+  git clone --quiet "$source_dir" "$staged_config"
+  git -C "$staged_config" remote set-url origin "$repo_url"
+fi
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-backup_root="$state_home/nvim-bootstrap/backups/$timestamp"
+backup_parent="$state_home/nvim-bootstrap/backups"
+backup_root=""
 made_backup=0
 
 backup_path() {
-  path="$1"
-  label="$2"
+  local path="$1"
+  local label="$2"
   if [[ -e "$path" || -L "$path" ]]; then
-    mkdir -p "$backup_root"
+    if [[ -z "$backup_root" ]]; then
+      mkdir -p "$backup_parent"
+      backup_root="$(mktemp -d "$backup_parent/$timestamp.XXXXXX")"
+    fi
     mv -- "$path" "$backup_root/$label"
     made_backup=1
   fi
@@ -157,7 +200,11 @@ if [[ $skip_plugins -eq 0 ]]; then
     "+qa"
 fi
 
-"$target_config/scripts/doctor.sh"
+doctor_args=()
+if [[ $skip_plugins -eq 1 ]]; then
+  doctor_args+=(--skip-plugins)
+fi
+"$target_config/scripts/doctor.sh" "${doctor_args[@]}"
 
 printf '\nNeovim is ready. Launch it with: nvim\n'
 printf 'For matching icons, choose JetBrains Mono plus 0xProto Nerd Font fallback in your terminal.\n'

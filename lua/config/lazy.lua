@@ -43,7 +43,7 @@ require("lazy").setup({
     },
   },
   checker = {
-    enabled = true, -- check for plugin updates periodically
+    enabled = vim.env.NVIM_DOCTOR ~= "1", -- avoid update checks during doctor runs
     notify = false, -- notify on update
   }, -- automatically check for plugin updates
   rocks = {

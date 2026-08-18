@@ -10,6 +10,10 @@ return {
     "mason-org/mason.nvim",
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
+      if vim.env.NVIM_MASON_AUTO_INSTALL == "0" then
+        opts.ensure_installed = {}
+        return
+      end
       for _, tool in ipairs({
         "basedpyright",
         "black",

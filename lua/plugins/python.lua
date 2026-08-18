@@ -78,7 +78,14 @@ return {
           end,
         },
         ruff = {
-          -- Disable Ruff diagnostics completely, only use for formatting
+          -- Keep basedpyright diagnostics; use Ruff only as a formatter.
+          init_options = {
+            settings = {
+              lint = {
+                enable = false,
+              },
+            },
+          },
           on_attach = function(client)
             client.server_capabilities.hoverProvider = false
             client.server_capabilities.diagnosticProvider = false

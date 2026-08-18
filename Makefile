@@ -7,10 +7,13 @@ doctor:
 	./scripts/doctor.sh
 
 format:
-	stylua lua tests
+	shfmt -w -i 2 -ci install.sh scripts/*.sh tests/*.sh
+	stylua lua scripts tests
 
 format-check:
-	stylua --check lua tests
+	shfmt -d -i 2 -ci install.sh scripts/*.sh tests/*.sh
+	stylua --check lua scripts tests
 
 test:
 	./tests/isolated.sh
+	./tests/install.sh

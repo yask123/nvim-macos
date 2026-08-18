@@ -10,14 +10,18 @@ permissions:
 jobs:
   smoke:
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Install test tools
-        run: brew install neovim shellcheck stylua
+        run: brew install neovim ripgrep fd fzf lazygit tree-sitter-cli shellcheck shfmt stylua node python uv lua
       - name: Check shell scripts
-        run: shellcheck install.sh scripts/*.sh tests/*.sh
+        run: |
+          shellcheck install.sh scripts/*.sh tests/*.sh
+          shfmt -d -i 2 -ci install.sh scripts/*.sh tests/*.sh
       - name: Check Lua formatting
-        run: stylua --check lua tests
+        run: stylua --check lua scripts tests
       - name: Run isolated Neovim smoke test
         run: ./tests/isolated.sh
+      - name: Exercise installer backups and uninstall
+        run: ./tests/install.sh
