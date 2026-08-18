@@ -22,6 +22,10 @@ assert_equal(typescript_command, { "npx", "--yes", "tsx@4.19.3", path }, "pinned
 local lazy_config = require("lazy.core.config")
 assert(lazy_config.plugins["mini.comment"].url == "https://github.com/nvim-mini/mini.comment.git", "mini.comment URL")
 assert(lazy_config.plugins["nvim-cmp"] == nil, "Blink should be the only completion engine")
+assert(
+  lazy_config.plugins["nvim-treesitter"].commit == "7caec274fd19c12b55902a5b795100d21531391f",
+  "Treesitter compatibility pin"
+)
 
 local lsp_opts = LazyVim.opts("nvim-lspconfig")
 local fake_client = { server_capabilities = { hoverProvider = true, diagnosticProvider = true } }
