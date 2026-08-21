@@ -66,6 +66,16 @@ local answer, response_error = tutor._parse_response(vim.json.encode({
 assert_equal(answer, "First point.\nSecond point.", "all response text is collected")
 assert_equal(response_error, nil, "valid response has no error")
 
+local nullable_answer, nullable_error = tutor._parse_response(vim.json.encode({
+  error = vim.NIL,
+  status = "completed",
+  output = {
+    { type = "message", content = { { type = "output_text", text = "Null is not an error." } } },
+  },
+}))
+assert_equal(nullable_answer, "Null is not an error.", "JSON null error field is ignored")
+assert_equal(nullable_error, nil, "JSON null error field does not fail parsing")
+
 local no_answer, api_error = tutor._parse_response(vim.json.encode({ error = { message = "Bad key" } }))
 assert_equal(no_answer, nil, "API error has no answer")
 assert_equal(api_error, "Bad key", "API error message is surfaced")

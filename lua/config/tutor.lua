@@ -181,19 +181,29 @@ function M._parse_response(body)
     return nil, "OpenAI returned unreadable data."
   end
 
-  if decoded.error then
-    return nil, decoded.error.message or "OpenAI rejected the request."
+  if decoded.error ~= nil and decoded.error ~= vim.NIL then
+    local message = type(decoded.error) == "table" and decoded.error.message or nil
+    return nil, type(message) == "string" and message or "OpenAI rejected the request."
   end
 
   if decoded.status == "incomplete" then
     return nil, "OpenAI stopped before finishing. Ask a narrower question."
   end
 
+  local output = decoded.output == vim.NIL and nil or decoded.output
+  if output ~= nil and type(output) ~= "table" then
+    return nil, "OpenAI returned unreadable data."
+  end
+
   local chunks = {}
-  for _, item in ipairs(decoded.output or {}) do
-    if item.type == "message" then
-      for _, content in ipairs(item.content or {}) do
-        if content.type == "output_text" and type(content.text) == "string" then
+  for _, item in ipairs(output or {}) do
+    if type(item) == "table" and item.type == "message" then
+      local content_items = item.content == vim.NIL and nil or item.content
+      if content_items ~= nil and type(content_items) ~= "table" then
+        return nil, "OpenAI returned unreadable data."
+      end
+      for _, content in ipairs(content_items or {}) do
+        if type(content) == "table" and content.type == "output_text" and type(content.text) == "string" then
           table.insert(chunks, content.text)
         end
       end
@@ -454,7 +464,11 @@ function M.submit(question)
 
       state.request = nil
       state.waiting = false
-      local answer, api_error = M._parse_response(result.stdout)
+      local parse_ok, answer, api_error = pcall(M._parse_response, result.stdout)
+      if not parse_ok then
+        answer = nil
+        api_error = "OpenAI returned an unexpected response."
+      end
       if result.code ~= 0 and api_error == "OpenAI returned unreadable data." then
         local transport_error = vim.trim(result.stderr or "")
         api_error = transport_error ~= "" and transport_error or "The request failed. Try again."
