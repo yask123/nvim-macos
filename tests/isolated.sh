@@ -30,7 +30,9 @@ if ! nvim --headless "+Lazy! restore" "+qa" >"$restore_log" 2>&1; then
   exit 1
 fi
 nvim -u NONE --headless -l "$test_config/tests/treesitter.lua"
-nvim --headless "+luafile $test_config/tests/smoke.lua" "+qa"
+nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/smoke.lua"
+nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/tutor.lua"
+python3 "$test_config/tests/test_openai_tutor.py"
 printf '\n'
 
 if ! cmp -s "$repo_root/lazy-lock.json" "$test_config/lazy-lock.json"; then

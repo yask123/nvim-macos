@@ -72,8 +72,38 @@ unrelated profiles and newer settings.
 - Obsidian-style Markdown notes rooted at `~/notes`
 - rendered Markdown and several light/dark themes
 - Claude Code integration when the separate `claude` command is installed
+- a read-only OpenAI Tutor for questions about selected text or the current file
 - debounced auto-save for normal named files only
 - a focused learning view with quiet diagnostics and minimal chrome
+
+### Learning Tutor
+
+Tutor is for understanding code, not generating or editing it. Select text and
+press `Space t a`, or press the same keys in normal mode to ask about the whole
+file. A compact chat opens on the right, or below in a narrow terminal; ask
+follow-ups with `a` or `Enter`.
+
+Tutor uses OpenAI's Responses API and reads the key only from your environment:
+
+```bash
+export OPENAI_API_KEY="your-key"
+```
+
+Put that line in `~/.zshrc`, then open a new terminal before starting Neovim.
+Do not put the key in this repository. `:TutorHealth` checks the local
+prerequisites without showing the key; it does not make a request or validate
+API access. OpenAI API usage is [billed separately from
+ChatGPT](https://help.openai.com/en/articles/8156019). The default model is
+`gpt-5.6-sol`; `NVIM_TUTOR_MODEL` may override it with a compatible GPT-5.6
+model.
+
+The selected text or current-file snapshot is sent only when you ask. Each
+follow-up also sends recent chat turns. The local transcript stays in Neovim
+memory, requests use `store: false`, and Tutor has no tools that can modify the
+source buffer. OpenAI's separate [API data-control
+policy](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint)
+still applies. Contexts over 60,000 characters are not sent; select the
+relevant lines instead.
 
 ### Main custom keys
 
@@ -93,7 +123,12 @@ Leader is the space bar.
 | `gc` | Comment using Mini Comment |
 | `Space u C` | Choose and remember a colorscheme |
 | `Space n H` | Notes menu |
+| `Space t a` | Ask Tutor about the selection or current file |
+| `Space t t` | Toggle the Tutor sidebar |
 | `Space a c` | Toggle Claude Code, when installed |
+
+Inside Tutor: `a` or `Enter` asks a follow-up, `n` starts a new chat, `x`
+stops the current answer, and `q` closes the sidebar.
 
 All normal LazyVim keys remain available except where explicitly overridden.
 
