@@ -1,7 +1,7 @@
 local M = {}
 
 local API_URL = "https://api.openai.com/v1/responses"
-local DEFAULT_MODEL = "gpt-5.6-terra"
+local DEFAULT_MODEL = "gpt-5.6-sol"
 local MAX_CONTEXT_CHARS = 60000
 local MAX_HISTORY_MESSAGES = 12
 local HELPER_PATH = vim.fs.joinpath(vim.fn.stdpath("config"), "scripts", "openai_tutor.py")

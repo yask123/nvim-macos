@@ -20,7 +20,7 @@ local typescript_command = runner.command_for(path, "typescript")
 assert_equal(typescript_command, { "npx", "--yes", "tsx@4.19.3", path }, "pinned TypeScript runner")
 
 local tutor = require("config.tutor")
-assert_equal(tutor._constants.default_model, "gpt-5.6-terra", "Tutor default model")
+assert_equal(tutor._constants.default_model, "gpt-5.6-sol", "Tutor default model")
 assert(tutor._constants.instructions:find("Do not edit files", 1, true), "Tutor must not edit learner files")
 assert(tutor._constants.instructions:find("two to five short sentences", 1, true), "Tutor answers should be brief")
 

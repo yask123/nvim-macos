@@ -94,7 +94,7 @@ Do not put the key in this repository. `:TutorHealth` checks the local
 prerequisites without showing the key; it does not make a request or validate
 API access. OpenAI API usage is [billed separately from
 ChatGPT](https://help.openai.com/en/articles/8156019). The default model is
-`gpt-5.6-terra`; `NVIM_TUTOR_MODEL` may override it with a compatible GPT-5.6
+`gpt-5.6-sol`; `NVIM_TUTOR_MODEL` may override it with a compatible GPT-5.6
 model.
 
 The selected text or current-file snapshot is sent only when you ask. Each
