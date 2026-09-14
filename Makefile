@@ -17,3 +17,4 @@ format-check:
 test:
 	./tests/isolated.sh
 	./tests/install.sh
+	./tests/update.sh

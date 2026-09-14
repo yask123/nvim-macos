@@ -13,6 +13,16 @@ vim.keymap.set("n", "<leader>rc", runner.run, { silent = true, desc = "Run (fres
 vim.keymap.set("n", "<leader>rq", runner.close, { silent = true, desc = "Close output panel" })
 
 -- =============================================================================
+-- Learning Tutor: understand the selection or current file without editing it
+-- =============================================================================
+
+local tutor = require("config.tutor")
+tutor.setup()
+vim.keymap.set("n", "<leader>ta", tutor.ask_file, { silent = true, desc = "Ask Tutor about file" })
+vim.keymap.set("x", "<leader>ta", tutor.ask_selection, { silent = true, desc = "Ask Tutor about selection" })
+vim.keymap.set("n", "<leader>tt", tutor.toggle, { silent = true, desc = "Toggle Tutor sidebar" })
+
+-- =============================================================================
 -- General Terminal (replaces toggleterm with Snacks.terminal)
 -- =============================================================================
 -- Ctrl+\ opens a floating terminal — works perfectly with zen-mode
@@ -67,7 +77,7 @@ end, { noremap = true, silent = true, desc = "Toggle Focus Mode" })
 -- =============================================================================
 
 -- Claude Code integration is handled by claudecode.nvim plugin
--- Keymaps: <leader>cc (toggle), <leader>cs (send selection), <leader>ca (add file)
+-- Keymaps: <leader>ac (toggle), <leader>as (send selection), <leader>ab (add file)
 
 vim.api.nvim_set_keymap("n", "<leader>w", ":w<CR>", { noremap = true, silent = true })
 

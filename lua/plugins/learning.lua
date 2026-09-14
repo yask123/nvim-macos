@@ -95,21 +95,6 @@ return {
     },
   },
 
-  -- Neo-tree: close sidebar when opening a file
-  {
-    "nvim-neo-tree/neo-tree.nvim",
-    opts = {
-      event_handlers = {
-        {
-          event = "file_opened",
-          handler = function()
-            require("neo-tree.command").execute({ action = "close" })
-          end,
-        },
-      },
-    },
-  },
-
   -- Disable zen-mode (conflicts with terminal/floating windows)
   {
     "folke/zen-mode.nvim",

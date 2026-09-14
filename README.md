@@ -22,6 +22,7 @@ The installer:
 - clones this repository to `~/.config/nvim`;
 - restores the exact plugin commits in `lazy-lock.json`;
 - installs the configured LSP servers and formatters through Mason;
+- installs `nvim-update` in `~/.local/bin` for safe future updates;
 - runs a non-destructive doctor at the end.
 
 It does not copy credentials, Claude authentication, note contents, sessions,
@@ -72,8 +73,38 @@ unrelated profiles and newer settings.
 - Obsidian-style Markdown notes rooted at `~/notes`
 - rendered Markdown and several light/dark themes
 - Claude Code integration when the separate `claude` command is installed
+- a read-only OpenAI Tutor for questions about selected text or the current file
 - debounced auto-save for normal named files only
 - a focused learning view with quiet diagnostics and minimal chrome
+
+### Learning Tutor
+
+Tutor is for understanding code, not generating or editing it. Select text and
+press `Space t a`, or press the same keys in normal mode to ask about the whole
+file. A compact chat opens on the right, or below in a narrow terminal; ask
+follow-ups with `a` or `Enter`.
+
+Tutor uses OpenAI's Responses API and reads the key only from your environment:
+
+```bash
+export OPENAI_API_KEY="your-key"
+```
+
+Put that line in `~/.zshrc`, then open a new terminal before starting Neovim.
+Do not put the key in this repository. `:TutorHealth` checks the local
+prerequisites without showing the key; it does not make a request or validate
+API access. OpenAI API usage is [billed separately from
+ChatGPT](https://help.openai.com/en/articles/8156019). The default model is
+`gpt-5.6-sol`; `NVIM_TUTOR_MODEL` may override it with a compatible GPT-5.6
+model.
+
+The selected text or current-file snapshot is sent only when you ask. Each
+follow-up also sends recent chat turns. The local transcript stays in Neovim
+memory, requests use `store: false`, and Tutor has no tools that can modify the
+source buffer. OpenAI's separate [API data-control
+policy](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint)
+still applies. Contexts over 60,000 characters are not sent; select the
+relevant lines instead.
 
 ### Main custom keys
 
@@ -86,6 +117,7 @@ Leader is the space bar.
 | `Space r q` | Close the output panel |
 | `Space r i` | Open a Python REPL |
 | `Space z l` | Toggle the focused learning view |
+| `Space e` | Toggle the file tree; it stays open while files are selected |
 | `Ctrl+\` | Toggle a floating terminal |
 | `Ctrl+W` | Close the current buffer (intentional VS Code-style override) |
 | `Tab` / `Shift+Tab` | Next / previous buffer |
@@ -93,7 +125,12 @@ Leader is the space bar.
 | `gc` | Comment using Mini Comment |
 | `Space u C` | Choose and remember a colorscheme |
 | `Space n H` | Notes menu |
+| `Space t a` | Ask Tutor about the selection or current file |
+| `Space t t` | Toggle the Tutor sidebar |
 | `Space a c` | Toggle Claude Code, when installed |
+
+Inside Tutor: `a` or `Enter` asks a follow-up, `n` starts a new chat, `x`
+stops the current answer, and `q` closes the sidebar.
 
 All normal LazyVim keys remain available except where explicitly overridden.
 
@@ -116,13 +153,18 @@ plugins there, checks the runner and Ruff behavior, and verifies that the test
 did not mutate the source repository. It also exercises backup-first install
 and recoverable uninstall behavior in a temporary home directory.
 
-To apply repository changes on another Mac without replacing local state:
+To apply repository changes on this or another installed Mac without replacing
+local state, quit Neovim and run:
 
 ```bash
-cd ~/.config/nvim
-git pull --ff-only
-nvim --headless "+Lazy! restore" "+qa"
+nvim-update
 ```
+
+The command fast-forwards the tracked Git branch, refuses to overwrite local
+config changes, restores the plugin commits pinned in `lazy-lock.json`, installs
+the configured editor tools, and runs the doctor. If `~/.local/bin` is not in
+your shell's `PATH`, run `~/.local/bin/nvim-update` or add that directory to
+`PATH`. Use `nvim-update --skip-plugins` when you only want the config files.
 
 Use `:Lazy update` only when intentionally refreshing plugin versions, then
 review and commit the resulting `lazy-lock.json`.
