@@ -192,6 +192,10 @@ backup_path "$target_cache" cache
 mkdir -p "$config_home" "$data_home" "$state_home" "$cache_home" "$user_home/notes/dailies"
 mv -- "$staged_config" "$target_config"
 
+user_bin="$user_home/.local/bin"
+mkdir -p "$user_bin"
+install -m 0755 "$target_config/scripts/update.sh" "$user_bin/nvim-update"
+
 if [[ $made_backup -eq 1 ]]; then
   printf 'Previous Neovim files backed up to %s\n' "$backup_root"
 fi
@@ -212,4 +216,5 @@ else
 fi
 
 printf '\nNeovim is ready. Launch it with: nvim\n'
+printf 'Update this setup later with: nvim-update\n'
 printf 'For matching icons, choose JetBrains Mono plus 0xProto Nerd Font fallback in your terminal.\n'

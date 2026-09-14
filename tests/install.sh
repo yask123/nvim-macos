@@ -19,6 +19,15 @@ export XDG_STATE_HOME="$HOME/.local/state"
 export XDG_CACHE_HOME="$HOME/.cache"
 export NVIM_BOOTSTRAP_REPO="$repo_root"
 
+fake_bin="$test_root/bin"
+mkdir -p "$fake_bin"
+cat >"$fake_bin/pgrep" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$fake_bin/pgrep"
+export PATH="$fake_bin:$PATH"
+
 mkdir -p \
   "$XDG_CONFIG_HOME/nvim" \
   "$XDG_DATA_HOME/nvim" \
@@ -40,6 +49,7 @@ touch "$HOME/Library/Fonts/0xProtoNerdFontMono-Regular.ttf"
 "$repo_root/install.sh" --skip-brew --skip-plugins
 
 [[ -f "$XDG_CONFIG_HOME/nvim/init.lua" ]]
+[[ -x "$HOME/.local/bin/nvim-update" ]]
 [[ -d "$HOME/notes/dailies" ]]
 [[ -f "$HOME/Documents/Folio/keep.txt" ]]
 [[ -f "$HOME/.vim/keep.txt" ]]

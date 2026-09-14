@@ -25,3 +25,5 @@ jobs:
         run: ./tests/isolated.sh
       - name: Exercise installer backups and uninstall
         run: ./tests/install.sh
+      - name: Exercise safe config updater
+        run: ./tests/update.sh

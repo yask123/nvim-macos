@@ -22,6 +22,7 @@ The installer:
 - clones this repository to `~/.config/nvim`;
 - restores the exact plugin commits in `lazy-lock.json`;
 - installs the configured LSP servers and formatters through Mason;
+- installs `nvim-update` in `~/.local/bin` for safe future updates;
 - runs a non-destructive doctor at the end.
 
 It does not copy credentials, Claude authentication, note contents, sessions,
@@ -116,6 +117,7 @@ Leader is the space bar.
 | `Space r q` | Close the output panel |
 | `Space r i` | Open a Python REPL |
 | `Space z l` | Toggle the focused learning view |
+| `Space e` | Toggle the file tree; it stays open while files are selected |
 | `Ctrl+\` | Toggle a floating terminal |
 | `Ctrl+W` | Close the current buffer (intentional VS Code-style override) |
 | `Tab` / `Shift+Tab` | Next / previous buffer |
@@ -151,13 +153,18 @@ plugins there, checks the runner and Ruff behavior, and verifies that the test
 did not mutate the source repository. It also exercises backup-first install
 and recoverable uninstall behavior in a temporary home directory.
 
-To apply repository changes on another Mac without replacing local state:
+To apply repository changes on this or another installed Mac without replacing
+local state, quit Neovim and run:
 
 ```bash
-cd ~/.config/nvim
-git pull --ff-only
-nvim --headless "+Lazy! restore" "+qa"
+nvim-update
 ```
+
+The command fast-forwards the tracked Git branch, refuses to overwrite local
+config changes, restores the plugin commits pinned in `lazy-lock.json`, installs
+the configured editor tools, and runs the doctor. If `~/.local/bin` is not in
+your shell's `PATH`, run `~/.local/bin/nvim-update` or add that directory to
+`PATH`. Use `nvim-update --skip-plugins` when you only want the config files.
 
 Use `:Lazy update` only when intentionally refreshing plugin versions, then
 review and commit the resulting `lazy-lock.json`.
