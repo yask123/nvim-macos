@@ -9,8 +9,7 @@ vim.opt.timeoutlen = 500
 -- Use treesitter for better folding
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
--- Don't fold by default when opening files
-vim.opt.foldenable = false
+-- Folds start open; big files open as an outline (lua/dojo/folds.lua)
 
 -- Python LSP Configuration
 -- Use basedpyright (latest fork with more features) instead of pyright
@@ -29,16 +28,27 @@ vim.g.lazyvim_python_ruff = "ruff"
 vim.opt.scrolloff = 12
 vim.opt.sidescrolloff = 12
 
--- Wrap long lines at word boundaries (don't hide code off-screen)
+-- Soft-wrap long lines at word boundaries (never hide code off-screen).
+-- Continuation lines keep their indent and start with a subtle ↪.
 vim.opt.wrap = true
 vim.opt.linebreak = true
+vim.opt.breakindent = true
+vim.opt.breakindentopt = "shift:2,min:40,sbr"
+vim.opt.showbreak = "↪ "
 
 -- Always show where you are
 vim.opt.cursorline = true
 
--- PEP 8 guide: 80-char column marker
-vim.opt.textwidth = 80
-vim.opt.colorcolumn = "80"
+-- No hard wrapping while typing: formatters own line length. Per-language
+-- rulers are set in autocmds.lua; `gqap` still re-wraps prose on demand.
+vim.opt.textwidth = 0
+vim.opt.colorcolumn = ""
+
+-- No UI animations (scroll, indent guides, zen, dim): everything is instant.
+vim.g.snacks_animate = false
+
+-- Borderless "card" floats (hover, completion docs, pickers).
+vim.o.winborder = "solid"
 
 -- Absolute line numbers (simpler for learning — "error on line 15" is clear)
 vim.opt.number = true
@@ -49,3 +59,6 @@ vim.opt.smoothscroll = true
 
 -- Show matching brackets
 vim.opt.showmatch = true
+
+-- Neovide (the Dojo app): fonts, animation, cursor particles, padding.
+require("dojo.gui").setup()

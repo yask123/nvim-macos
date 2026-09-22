@@ -8,7 +8,8 @@ end
 local version = vim.version()
 local version_supported = version.major > 0 or version.minor > 11 or (version.minor == 11 and version.patch >= 2)
 assert(version_supported, "Neovim 0.11.2+ is required")
-assert_equal(vim.g.colors_name, "catppuccin-latte", "default colorscheme")
+assert(vim.g.colors_name:match("^rose%-pine"), "default colorscheme: got " .. tostring(vim.g.colors_name))
+assert_equal(require("config.theme").default, "rose-pine", "theme follows macOS light/dark")
 
 local runner = require("config.runner")
 local path = "/tmp/a folder/hello world;touch should-not-run.py"
@@ -66,14 +67,20 @@ end
 vim.api.nvim_buf_delete(tutor_buf, { force = true })
 
 local lazy_config = require("lazy.core.config")
-assert(lazy_config.plugins["mini.comment"].url == "https://github.com/nvim-mini/mini.comment.git", "mini.comment URL")
+assert(lazy_config.plugins["mini.comment"] == nil, "native gc + ts-comments handle commenting")
+assert(lazy_config.plugins["vim-visual-multi"] == nil, "multicursor.nvim replaces vim-visual-multi")
+assert(lazy_config.plugins["fzf-lua"] == nil, "snacks.picker is the only picker")
 assert(lazy_config.plugins["nvim-cmp"] == nil, "Blink should be the only completion engine")
-assert(
-  lazy_config.plugins["nvim-treesitter"].commit == "7caec274fd19c12b55902a5b795100d21531391f",
-  "Treesitter compatibility pin"
+assert_equal(
+  lazy_config.plugins["nvim-treesitter"].commit,
+  vim.fn.has("nvim-0.12") == 0 and "7caec274fd19c12b55902a5b795100d21531391f" or nil,
+  "Treesitter compatibility pin only on Neovim 0.11"
 )
 
 local lsp_opts = LazyVim.opts("nvim-lspconfig")
+assert_equal(lsp_opts.diagnostics.virtual_text, false, "quiet inline diagnostics")
+assert_equal(lsp_opts.diagnostics.signs.severity, { min = vim.diagnostic.severity.ERROR }, "errors-only signs")
+assert_equal(vim.o.textwidth, 0, "no hard wrap while typing")
 local fake_client = { server_capabilities = { hoverProvider = true, diagnosticProvider = true } }
 local diagnostics_before = vim.diagnostic.is_enabled({ bufnr = 0 })
 assert(lsp_opts.servers.ruff.init_options.settings.lint.enable == false, "Ruff linting should be disabled")

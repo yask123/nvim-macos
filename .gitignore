@@ -5,3 +5,5 @@
 .tests/
 *.log
 doc/tags
+sfx/sounds/
+sfx/nvsfx

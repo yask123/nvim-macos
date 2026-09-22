@@ -129,6 +129,7 @@ function M.run()
       active_job = nil
       local title = result.code == 0 and "Output" or ("Output (exit: " .. result.code .. ")")
       show_output(output_lines(result), title)
+      require("dojo.sfx").run_result(result.code)
     end)
   end)
   active_job = job

@@ -128,8 +128,17 @@ if [[ $skip_brew -eq 0 ]]; then
   if ! brew list --cask font-0xproto-nerd-font >/dev/null 2>&1 && font_file_exists '*0xProto*'; then
     append_cask_skip font-0xproto-nerd-font
   fi
+  if ! brew list --cask font-monaspice-nerd-font >/dev/null 2>&1 && font_file_exists '*MonaspiceNeNerdFont*'; then
+    append_cask_skip font-monaspice-nerd-font
+  fi
+  if ! brew list --cask neovide-app >/dev/null 2>&1 && [[ -d /Applications/Neovide.app ]]; then
+    append_cask_skip neovide-app
+  fi
+  if ! brew list --cask ghostty >/dev/null 2>&1 && [[ -d /Applications/Ghostty.app ]]; then
+    append_cask_skip ghostty
+  fi
   if [[ "$cask_skip" != "${HOMEBREW_BUNDLE_CASK_SKIP:-}" ]]; then
-    printf 'Matching manually installed fonts found; keeping them in place.\n'
+    printf 'Matching manually installed apps or fonts found; keeping them in place.\n'
   fi
 
   printf 'Installing command-line tools and fonts…\n'
@@ -202,11 +211,9 @@ fi
 
 if [[ $skip_plugins -eq 0 ]]; then
   printf 'Restoring pinned plugins and installing editor tools…\n'
-  nvim --headless \
-    "+Lazy! restore" \
+  "$target_config/scripts/restore-plugins.sh" "$target_config" \
     "+Lazy! load mason.nvim" \
-    "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')" \
-    "+qa"
+    "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')"
 fi
 
 if [[ $skip_plugins -eq 1 ]]; then
@@ -217,4 +224,4 @@ fi
 
 printf '\nNeovim is ready. Launch it with: nvim\n'
 printf 'Update this setup later with: nvim-update\n'
-printf 'For matching icons, choose JetBrains Mono plus 0xProto Nerd Font fallback in your terminal.\n'
+printf 'For the Dojo app (Neovide launcher, Ghostty and zsh extras) run: %s/scripts/setup-dojo.sh\n' "$target_config"

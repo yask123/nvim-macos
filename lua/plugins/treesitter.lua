@@ -1,8 +1,8 @@
--- LazyVim 16 conditionally selects this compatibility commit on Neovim 0.11.
--- Keep it explicit so 0.11 and 0.12 restore the same reproducible plugin graph.
+-- nvim-treesitter `main` dropped Neovim 0.11 (c82bf96). On 0.11 pin the last
+-- compatible commit, exactly like LazyVim 16 does; on 0.12+ follow the lockfile.
 return {
   {
     "nvim-treesitter/nvim-treesitter",
-    commit = "7caec274fd19c12b55902a5b795100d21531391f",
+    commit = vim.fn.has("nvim-0.12") == 0 and "7caec274fd19c12b55902a5b795100d21531391f" or nil,
   },
 }

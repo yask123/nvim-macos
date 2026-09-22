@@ -91,11 +91,9 @@ if ! command -v nvim >/dev/null 2>&1; then
 fi
 
 printf 'Restoring pinned plugins and editor tools…\n'
-NVIM_DOCTOR=1 NVIM_MASON_AUTO_INSTALL=0 nvim --headless \
-  "+Lazy! restore" \
+NVIM_DOCTOR=1 NVIM_MASON_AUTO_INSTALL=0 "$config_dir/scripts/restore-plugins.sh" "$config_dir" \
   "+Lazy! load mason.nvim" \
-  "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')" \
-  "+qa"
+  "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')"
 
 "$config_dir/scripts/doctor.sh"
 

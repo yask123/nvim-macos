@@ -24,7 +24,7 @@ export XDG_CACHE_HOME="$test_root/cache"
 export NVIM_SKIP_MASON_INSTALL=1
 
 restore_log="$test_root/lazy-restore.log"
-if ! nvim --headless "+Lazy! restore" "+qa" >"$restore_log" 2>&1; then
+if ! "$test_config/scripts/restore-plugins.sh" "$test_config" >"$restore_log" 2>&1; then
   printf 'Lazy restore failed:\n' >&2
   tail -n 200 "$restore_log" >&2
   exit 1
@@ -32,6 +32,7 @@ fi
 nvim -u NONE --headless -l "$test_config/tests/treesitter.lua"
 nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/smoke.lua"
 nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/tutor.lua"
+nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/dojo.lua"
 python3 "$test_config/tests/test_openai_tutor.py"
 printf '\n'
 

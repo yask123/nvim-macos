@@ -111,8 +111,12 @@ vim.keymap.set("n", "<leader>bo", function()
   end
 end, { noremap = true, silent = true, desc = "Close all other buffers" })
 
--- Select all text
-vim.keymap.set({ "n", "i" }, "<C-a>", "<Esc>ggVG", { desc = "Select All" })
+-- macOS text keys: Ctrl-A / Ctrl-E jump to line start / end (as in every Mac
+-- text field and VS Code). Ghostty also sends these for ⌘← / ⌘→.
+-- Select all is ⌘A.
+vim.keymap.set("n", "<C-a>", "^", { desc = "Line start" })
+vim.keymap.set("i", "<C-a>", "<C-o>^", { desc = "Line start" })
+vim.keymap.set("i", "<C-e>", "<End>", { desc = "Line end" })
 
 -- Disable macro recording (q key) - prevent accidental triggers
 vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording)" })
@@ -120,13 +124,10 @@ vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disab
 -- Claude Code: Send visual selection
 vim.keymap.set("v", "<leader>as", ":ClaudeCodeSend<CR>", { noremap = true, silent = true, desc = "Send to Claude" })
 
--- Pick and save colorscheme permanently
+-- Pick and save colorscheme permanently (★ = follows macOS light/dark)
 vim.keymap.set("n", "<leader>uC", function()
-  vim.ui.select(vim.fn.getcompletion("", "color"), { prompt = "Select colorscheme:" }, function(choice)
-    if choice then
-      vim.cmd.colorscheme(choice)
-      require("config.theme").save(choice)
-      vim.notify("Colorscheme saved: " .. choice, vim.log.levels.INFO)
-    end
-  end)
+  require("dojo.theme").pick()
 end, { desc = "Pick & save colorscheme" })
+
+-- Dojo: Cmd-key layer, cheatsheet, palette, projects (lua/dojo)
+require("dojo").setup()

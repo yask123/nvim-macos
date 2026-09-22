@@ -107,8 +107,32 @@ else
   fail "0xProto Nerd Font is missing"
 fi
 
+if { command -v brew >/dev/null 2>&1 && brew list --cask font-monaspice-nerd-font >/dev/null 2>&1; } ||
+  font_file_exists '*MonaspiceNeNerdFont*'; then
+  ok "Monaspice (Monaspace Neon) Nerd Font"
+else
+  warn "Monaspice Nerd Font is missing (brew install --cask font-monaspice-nerd-font); Neovide and Ghostty use it"
+fi
+
 config_home="${XDG_CONFIG_HOME:-$user_home/.config}"
 config_dir="$config_home/nvim"
+
+# Dojo desktop pieces are optional: scripts/setup-dojo.sh installs them.
+if [[ -d /Applications/Neovide.app ]]; then
+  ok "Neovide app"
+else
+  warn "Neovide is not installed (brew install --cask neovide-app)"
+fi
+if [[ -d "$user_home/Applications/Dojo.app" ]]; then
+  ok "Dojo.app launcher"
+else
+  warn "Dojo.app is missing; run scripts/setup-dojo.sh"
+fi
+if [[ -e "$config_home/neovide/config.toml" ]]; then
+  ok "Neovide config"
+else
+  warn "Neovide config is not linked; run scripts/setup-dojo.sh"
+fi
 
 if [[ -f "$config_dir/init.lua" && -f "$config_dir/lazy-lock.json" ]]; then
   ok "Neovim config and plugin lock"

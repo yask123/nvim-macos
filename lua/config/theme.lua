@@ -1,11 +1,15 @@
 local M = {}
 
-M.default = "catppuccin-latte"
+M.default = "rose-pine" -- follows macOS light/dark
 M.path = vim.fn.stdpath("state") .. "/colorscheme"
 
 function M.get()
   local ok, lines = pcall(vim.fn.readfile, M.path)
   local saved = ok and lines[1] or nil
+  -- Neovim 0.12 bundles a Vim-script "catppuccin"; the plugin's alias avoids it.
+  if saved == "catppuccin" then
+    saved = "catppuccin-nvim"
+  end
   if saved and saved:match("^[%w_.-]+$") then
     return saved
   end
