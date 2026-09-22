@@ -23,7 +23,7 @@ return {
                 autoSearchPaths = true,
                 useLibraryCodeForTypes = true,
                 diagnosticMode = "openFilesOnly", -- Only check current file
-                autoImportCompletions = true,
+                autoImportCompletions = false, -- only names you can use here, not the whole stdlib
                 -- Only report syntax errors
                 diagnosticSeverityOverrides = {
                   reportUndefinedVariable = "error",

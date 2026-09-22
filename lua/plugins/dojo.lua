@@ -79,6 +79,18 @@ return {
     opts = function(_, opts)
       opts.sources.default = { "lsp", "path", "buffer" }
       opts.completion.ghost_text = { enabled = false }
+      -- Match what you typed, not near-misses ("Ani" → Animal, not AF_UNIX).
+      opts.fuzzy = vim.tbl_deep_extend("force", opts.fuzzy or {}, {
+        max_typos = function()
+          return 0
+        end,
+      })
+      -- A short list; words from the file only when nothing better matches.
+      opts.completion.list = vim.tbl_deep_extend("force", opts.completion.list or {}, { max_items = 30 })
+      opts.completion.menu = vim.tbl_deep_extend("force", opts.completion.menu or {}, { max_height = 8 })
+      opts.sources.providers = vim.tbl_deep_extend("force", opts.sources.providers or {}, {
+        buffer = { score_offset = -3 },
+      })
     end,
   },
 
