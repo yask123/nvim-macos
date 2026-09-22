@@ -1,59 +1,65 @@
+-- ⌘R: save and run the current file in a panel at the bottom, like VS Code.
+-- The panel is a real terminal, so programs that ask for input just work.
+-- When the program ends, the cursor goes back to your code and the output
+-- stays in view. q or ⌘J closes the panel; ⌘R runs again.
+
 local M = {}
 
-local output_buf
-local output_win
-local active_job
+local panel = { win = nil, buf = nil, job = nil }
 
-local function clear_output()
-  if output_win and vim.api.nvim_win_is_valid(output_win) then
-    vim.api.nvim_win_close(output_win, true)
-  end
-  if output_buf and vim.api.nvim_buf_is_valid(output_buf) then
-    vim.api.nvim_buf_delete(output_buf, { force = true })
-  end
-  output_win = nil
-  output_buf = nil
+local function valid_win(win)
+  return win and vim.api.nvim_win_is_valid(win)
 end
 
+local function is_file_win(win)
+  local buf = vim.api.nvim_win_get_buf(win)
+  return vim.api.nvim_win_get_config(win).relative == ""
+    and vim.bo[buf].buftype == ""
+    and vim.api.nvim_buf_get_name(buf) ~= ""
+end
+
+-- The file to run: the current window's, or (from the panel or a terminal)
+-- the file you were just in.
+local function source_window()
+  local current = vim.api.nvim_get_current_win()
+  if is_file_win(current) then
+    return current
+  end
+  local previous = vim.fn.win_getid(vim.fn.winnr("#"))
+  if previous ~= 0 and is_file_win(previous) then
+    return previous
+  end
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if is_file_win(win) then
+      return win
+    end
+  end
+end
+
+local function set_title(text)
+  if valid_win(panel.win) then
+    local title = text:gsub("%%", "%%%%") -- a file name may contain %
+    vim.wo[panel.win].winbar = "%#Comment#  " .. title .. "%=q or ⌘J close  ·  ⌘R run again  "
+  end
+end
+
+function M.is_open()
+  return valid_win(panel.win)
+end
+
+--- Close the panel (stopping the program if it's still running).
 function M.close()
-  if active_job then
-    pcall(active_job.kill, active_job, 15)
-    active_job = nil
+  if panel.job then
+    pcall(vim.fn.jobstop, panel.job)
   end
-  clear_output()
-end
-
-local function show_output(lines, title)
-  clear_output()
-
-  output_buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(output_buf, 0, -1, false, lines)
-  vim.bo[output_buf].buftype = "nofile"
-  vim.bo[output_buf].bufhidden = "wipe"
-  vim.bo[output_buf].modifiable = false
-  vim.bo[output_buf].filetype = "text"
-
-  local width = math.max(math.min(vim.o.columns - 4, 120), 20)
-  local height = math.max(math.min(math.floor(vim.o.lines * 0.3), vim.o.lines - 4), 5)
-  local row = math.max(vim.o.lines - height - 3, 0)
-  local col = math.max(math.floor((vim.o.columns - width) / 2), 0)
-
-  output_win = vim.api.nvim_open_win(output_buf, false, {
-    relative = "editor",
-    row = row,
-    col = col,
-    width = width,
-    height = height,
-    style = "minimal",
-    border = "single",
-    title = " " .. (title or "Output") .. " ",
-    title_pos = "left",
-  })
-
-  vim.wo[output_win].wrap = true
-  vim.wo[output_win].cursorline = false
-  vim.keymap.set("n", "q", M.close, { buffer = output_buf, silent = true })
-  vim.keymap.set("n", "<Esc>", M.close, { buffer = output_buf, silent = true })
+  panel.job = nil
+  if valid_win(panel.win) then
+    pcall(vim.api.nvim_win_close, panel.win, true)
+  end
+  if panel.buf and vim.api.nvim_buf_is_valid(panel.buf) then
+    pcall(vim.api.nvim_buf_delete, panel.buf, { force = true })
+  end
+  panel.win, panel.buf = nil, nil
 end
 
 ---@param file string
@@ -90,49 +96,86 @@ function M.command_for(file, filetype)
   return nil, nil, "No run command for filetype: " .. filetype
 end
 
-local function output_lines(result)
-  local chunks = {}
-  if result.stdout and result.stdout ~= "" then
-    table.insert(chunks, result.stdout)
+local function finished(job, code, name, source)
+  if job ~= panel.job then
+    return -- replaced by a newer run, or closed
   end
-  if result.stderr and result.stderr ~= "" then
-    table.insert(chunks, result.stderr)
+  panel.job = nil
+  set_title(code == 0 and (name .. " finished") or (name .. " exited with code " .. code))
+  -- Back to the code, unless you've already moved on yourself.
+  if vim.api.nvim_get_current_win() == panel.win then
+    vim.cmd.stopinsert()
+    if valid_win(source) then
+      vim.api.nvim_set_current_win(source)
+    end
   end
-  local text = table.concat(chunks, "\n")
-  local lines = vim.split(text, "\n", { plain = true, trimempty = true })
-  return #lines > 0 and lines or { "(no output)" }
+  require("dojo.sfx").run_result(code)
 end
 
 function M.run()
-  local file = vim.api.nvim_buf_get_name(0)
-  local command, cwd, err = M.command_for(file, vim.bo.filetype)
+  local source = source_window()
+  if not source then
+    vim.notify("Open a file to run it", vim.log.levels.WARN, { title = "Run" })
+    return
+  end
+  local buf = vim.api.nvim_win_get_buf(source)
+  local file = vim.api.nvim_buf_get_name(buf)
+  local command, cwd, err = M.command_for(file, vim.bo[buf].filetype)
   if not command then
-    vim.notify(err, vim.log.levels.WARN)
+    vim.notify(err, vim.log.levels.WARN, { title = "Run" })
     return
   end
   if vim.fn.executable(command[1]) ~= 1 then
-    vim.notify("Runner executable not found: " .. command[1], vim.log.levels.ERROR)
+    vim.notify("Runner executable not found: " .. command[1], vim.log.levels.ERROR, { title = "Run" })
     return
   end
-
-  vim.cmd.write()
-
-  M.close()
-  show_output({ "Running…" }, "Output")
-
-  local job
-  job = vim.system(command, { cwd = cwd, text = true }, function(result)
-    vim.schedule(function()
-      if active_job ~= job then
-        return
-      end
-      active_job = nil
-      local title = result.code == 0 and "Output" or ("Output (exit: " .. result.code .. ")")
-      show_output(output_lines(result), title)
-      require("dojo.sfx").run_result(result.code)
-    end)
+  vim.api.nvim_buf_call(buf, function()
+    vim.cmd("silent update")
   end)
-  active_job = job
+
+  -- One bottom panel at a time: the run replaces the old run and hides the terminal.
+  M.close()
+  for _, term in ipairs(Snacks.terminal.list()) do
+    if term:valid() then
+      term:hide()
+    end
+  end
+
+  panel.buf = vim.api.nvim_create_buf(false, true)
+  panel.win = vim.api.nvim_open_win(panel.buf, true, {
+    split = "below",
+    win = -1, -- full width, along the bottom
+    height = math.max(6, math.floor(vim.o.lines * 0.3)),
+  })
+  local wo = vim.wo[panel.win]
+  wo.number, wo.relativenumber, wo.cursorline = false, false, false
+  wo.signcolumn, wo.foldcolumn, wo.statuscolumn = "no", "0", ""
+  wo.winfixheight = true
+
+  local name = vim.fn.fnamemodify(file, ":t")
+  local job
+  job = vim.fn.jobstart(command, {
+    term = true,
+    cwd = cwd,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        finished(job, code, name, source)
+      end)
+    end,
+  })
+  panel.job = job
+  for _, key in ipairs({ "q", "<Esc>" }) do
+    vim.keymap.set("n", key, function()
+      M.close()
+      if valid_win(source) then
+        vim.api.nvim_set_current_win(source)
+      end
+    end, { buffer = panel.buf, silent = true, desc = "Close run output" })
+  end
+  set_title("Running " .. name .. "…")
+  if #vim.api.nvim_list_uis() > 0 then
+    vim.cmd.startinsert() -- keys go to the program, for input()
+  end
 end
 
 return M

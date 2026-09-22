@@ -16,6 +16,10 @@ return {
       opts.scroll = { enabled = vim.g.neovide == nil } -- Neovide animates scrolling itself
       opts.image = { enabled = vim.g.neovide == nil } -- kitty graphics: Ghostty yes, Neovide no
       opts.styles = vim.tbl_deep_extend("force", opts.styles or {}, { zen = { width = 100 } })
+      -- The terminal panel is labelled plainly, not "1: term://~/project//4242".
+      opts.terminal = vim.tbl_deep_extend("force", opts.terminal or {}, {
+        win = { wo = { winbar = "%#Comment#  Terminal" } },
+      })
       opts.picker = opts.picker or {}
       -- One Esc closes a picker, as in any Mac app (not "leave typing, then close").
       opts.picker.win = vim.tbl_deep_extend("force", opts.picker.win or {}, {

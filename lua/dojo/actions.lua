@@ -343,13 +343,25 @@ end
 function M.close_output()
   normal_mode()
   require("config.runner").close()
+  focus_editor()
 end
 
+-- ⌘J, like VS Code's panel: hides run output or the terminal, whichever is
+-- showing; with neither showing, opens the terminal.
 function M.toggle_terminal()
-  if vim.api.nvim_get_mode().mode:match("^[iR]") then
+  if vim.api.nvim_get_mode().mode:match("^[iRt]") then
     vim.cmd.stopinsert()
   end
-  local term = Snacks.terminal.toggle(nil, { cwd = root(), win = { position = "bottom", height = 0.32 } })
+  local runner = require("config.runner")
+  if runner.is_open() then
+    runner.close()
+    vim.schedule(focus_editor)
+    return
+  end
+  local term = Snacks.terminal.toggle(nil, {
+    cwd = root(),
+    win = { position = "bottom", height = 0.32, wo = { winbar = "%#Comment#  Terminal%=⌘J hide  " } },
+  })
   if term and not term:valid() then
     vim.schedule(focus_editor) -- hidden: back to your file, not the tree
   end

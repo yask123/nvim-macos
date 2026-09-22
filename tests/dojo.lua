@@ -126,6 +126,48 @@ local function run()
   assert_equal(vim.fn.getcwd(), vim.fn.resolve(dir), "project cwd")
   assert(vim.o.titlestring:find(vim.fs.basename(dir), 1, true), "window title names the project")
 
+  -- ⌘R runs the file in a bottom panel; focus returns to the code when it
+  -- ends, the output stays, and ⌘J closes it.
+  -- Headless Neovim 0.12 can crash if a keymap scan (which-key's timer, or a
+  -- language server attaching) lands while a terminal job starts or ends; it
+  -- hasn't happened with a UI attached. So: a shell script (no language
+  -- server) and which-key paused for the rest of the test.
+  pcall(function()
+    require("which-key.triggers").attach = function() end
+  end)
+  -- The project test above opens its file tree a moment later; let it, then close it.
+  vim.wait(2000, function()
+    return #Snacks.picker.get({ source = "explorer" }) > 0
+  end)
+  for _, picker in ipairs(Snacks.picker.get()) do
+    picker:close()
+  end
+  vim.cmd("silent! only")
+  local script = vim.fn.tempname() .. ".sh"
+  vim.fn.writefile({ 'echo "hello from run"' }, script)
+  vim.cmd.edit(script)
+  local code_win = vim.api.nvim_get_current_win()
+  local runner = require("config.runner")
+  runner.run()
+  assert(runner.is_open(), "run opens the output panel")
+  vim.wait(5000, function()
+    return vim.api.nvim_get_current_win() == code_win
+  end)
+  assert_equal(vim.api.nvim_get_current_win(), code_win, "focus returns to the code when the run ends")
+  local output = ""
+  vim.wait(2000, function()
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      if vim.bo[buf].buftype == "terminal" then
+        output = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+      end
+    end
+    return output:find("hello from run", 1, true) ~= nil
+  end)
+  assert(output:find("hello from run", 1, true), "run output is shown: " .. output)
+  actions.toggle_terminal()
+  assert(not runner.is_open(), "⌘J closes the run output")
+
   -- Sound is inert without a UI and never errors.
   assert(package.loaded.sfx == nil or not require("sfx").active(), "sfx must stay silent headless")
   require("dojo.sfx").play("open")
