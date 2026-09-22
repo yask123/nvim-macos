@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# dojo — open Neovim (Neovide) like a GUI editor.
+#
+#   dojo                open the Dojo dashboard (or bring the window forward)
+#   dojo <folder>       open that folder as the project (restores its session)
+#   dojo <file>         open a file, with its git repo (or folder) as the project
+#
+# If Dojo is already running, the folder opens in the existing window (like
+# VS Code's Open Folder) through the socket Dojo serves. Otherwise Neovide
+# starts centred on the screen under the mouse at a calm ~3:2 proportion.
+# Neovide has no position flag, so the geometry is written to its settings
+# file just before a cold start (points × backing scale, top-left origin).
+
+set -Eeuo pipefail
+
+neovide_app="${DOJO_NEOVIDE_APP:-/Applications/Neovide.app}"
+neovide_bin="$neovide_app/Contents/MacOS/neovide"
+settings="$HOME/Library/Application Support/neovide/neovide-settings.json"
+socket="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/dojo.sock"
+
+nvim_bin="$(command -v nvim || true)"
+for candidate in /opt/homebrew/bin/nvim /usr/local/bin/nvim; do
+  [[ -n "$nvim_bin" ]] && break
+  [[ -x "$candidate" ]] && nvim_bin="$candidate"
+done
+
+if [[ ! -x "$neovide_bin" ]]; then
+  printf 'Neovide is not installed at %s (brew install --cask neovide-app)\n' "$neovide_app" >&2
+  exit 1
+fi
+
+target="${1:-}"
+dir=""
+file=""
+if [[ -n "$target" ]]; then
+  if [[ -d "$target" ]]; then
+    dir="$(cd -- "$target" && pwd -P)"
+  elif [[ -e "$target" || -d "$(dirname -- "$target")" ]]; then
+    dir="$(cd -- "$(dirname -- "$target")" && pwd -P)"
+    file="$dir/$(basename -- "$target")"
+    # Like VS Code: a file inside a git repo opens with the repo as the project.
+    root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
+    [[ -n "$root" ]] && dir="$root"
+  else
+    printf 'No such file or folder: %s\n' "$target" >&2
+    exit 1
+  fi
+fi
+
+# Vimscript single-quoted string literal.
+vim_quote() {
+  local q="'" # a variable keeps the substitution correct under macOS bash 3.2
+  local s="${1//$q/$q$q}"
+  printf "'%s'" "$s"
+}
+
+# 1. Dojo is running: switch its window to the folder (and file), then focus it.
+if [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remote-expr 1 >/dev/null 2>&1; then
+  if [[ -n "$dir" ]]; then
+    args="[$(vim_quote "$dir")"
+    [[ -n "$file" ]] && args+=", $(vim_quote "$file")"
+    "$nvim_bin" --server "$socket" --remote-expr \
+      "luaeval('require(\"dojo.project\").open(_A[1], _A[2])', $args])" >/dev/null
+  fi
+  open -a "$neovide_app"
+  exit 0
+fi
+
+# 2. Neovide is running without Dojo's socket: give the folder its own window.
+if pgrep -xq neovide; then
+  if [[ -z "$dir" ]]; then
+    open -a "$neovide_app"
+  else
+    args=(--reuse-instance --new-window --chdir "$dir")
+    [[ -n "$file" ]] && args+=("$file")
+    "$neovide_bin" "${args[@]}" >/dev/null 2>&1 &
+    disown
+  fi
+  exit 0
+fi
+
+# 3. Cold start: centre the window on the screen under the mouse pointer.
+geometry="$(
+  osascript -l JavaScript -e '
+ObjC.import("AppKit");
+const mouse = $.NSEvent.mouseLocation;
+const screens = $.NSScreen.screens;
+const primary = screens.objectAtIndex(0).frame;
+let screen = $.NSScreen.mainScreen;
+for (let i = 0; i < screens.count; i++) {
+  const f = screens.objectAtIndex(i).frame;
+  if (mouse.x >= f.origin.x && mouse.x < f.origin.x + f.size.width &&
+      mouse.y >= f.origin.y && mouse.y < f.origin.y + f.size.height) { screen = screens.objectAtIndex(i); break; }
+}
+const v = screen.visibleFrame, scale = screen.backingScaleFactor;
+const small = v.size.width < 1700;
+let h = Math.round(v.size.height * (small ? 0.88 : 0.82));
+let w = Math.round(Math.min(h * 1.5, v.size.width * (small ? 0.9 : 0.72)));
+const x = Math.round(v.origin.x + (v.size.width - w) / 2);
+const top = primary.size.height - (v.origin.y + v.size.height);
+const y = Math.round(top + (v.size.height - h) / 2);
+[x, y, w, h].map((n) => Math.round(n * scale)).join(" ");'
+)"
+read -r x y w h <<<"$geometry"
+mkdir -p "$(dirname -- "$settings")"
+printf '{"window":{"Windowed":{"position":{"x":%s,"y":%s},"pixel_size":{"width":%s,"height":%s},"grid_size":{"width":120,"height":40}}}}\n' \
+  "$x" "$y" "$w" "$h" >"$settings"
+
+# Frame, title, icon and fonts come from ~/.config/neovide/config.toml.
+launch_args=()
+[[ -n "$dir" ]] && launch_args+=(--chdir "$dir")
+[[ -n "$file" ]] && launch_args+=(-- "$file")
+open -a "$neovide_app" --args ${launch_args[@]+"${launch_args[@]}"}

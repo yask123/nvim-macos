@@ -1,0 +1,50 @@
+# Ghostty — calm, nvim-friendly terminal for Dojo.
+# Symlinked to ~/.config/ghostty/config. Reload with ⌘⇧, (Cmd+Shift+Comma).
+
+# --- Type: Monaspace Neon throughout, with its own clean italic
+font-family = "MonaspiceNe Nerd Font"
+font-family-bold = "MonaspiceNe Nerd Font"
+font-family-italic = "MonaspiceNe Nerd Font"
+font-family-bold-italic = "MonaspiceNe Nerd Font"
+font-style = Regular
+font-style-bold = Bold
+font-style-italic = Italic
+font-style-bold-italic = Bold Italic
+# calt = texture healing, liga = repeat spacing, ss03 = arrows; other ligatures off
+font-feature = calt
+font-feature = liga
+font-feature = ss03
+font-size = 15
+adjust-cell-height = 12%
+
+# --- Colour: follows macOS light/dark, same as Neovim
+theme = light:Rose Pine Dawn,dark:Rose Pine Moon
+window-theme = auto
+window-colorspace = srgb
+
+# --- Window: breathing room, no chrome noise
+macos-titlebar-style = transparent
+window-padding-x = 22
+window-padding-y = 16
+window-padding-balance = true
+window-padding-color = extend
+cursor-style-blink = false
+mouse-hide-while-typing = true
+macos-option-as-alt = left
+unfocused-split-opacity = 0.88
+bell-features = no-system,no-audio,attention,no-title,no-border
+
+# --- Cmd keys reach Neovim as <D-…> (kitty keyboard protocol). In zsh an
+# unbound Cmd key simply sends nothing, so these unbinds are harmless there.
+keybind = super+shift+p=unbind
+keybind = super+ctrl+shift+p=toggle_command_palette
+keybind = super+a=unbind
+keybind = super+j=unbind
+keybind = super+shift+[=unbind
+keybind = super+shift+]=unbind
+keybind = super+[=unbind
+keybind = super+]=unbind
+
+# ⌘← / ⌘→ / ⌘⌫ keep Ghostty's defaults (Ctrl-A / Ctrl-E / Ctrl-U) so every
+# terminal program understands them. Inside nvim in a terminal use Home / End
+# (or ^ / $); in the Dojo app these Cmd keys work natively.

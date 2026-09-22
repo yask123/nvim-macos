@@ -1,0 +1,39 @@
+# Neovide settings for Dojo. Symlinked to ~/.config/neovide/config.toml.
+# Fonts live here (not in 'guifont', which would wipe the per-style families).
+# A type error anywhere makes Neovide ignore the whole file — keep strings quoted.
+
+frame = "transparent"          # traffic lights float over the editor, no title strip
+title-hidden = true
+icon = "~/.config/nvim/extras/dojo/Dojo.icns"
+system-native-tabs = true      # ⌘N windows show as tabs instead of hiding each other
+system-pinned-hotkey = "false" # don't grab ⌘⌃Z system-wide
+
+[font]
+size = 15.0 # 14 reads the same on a MacBook panel
+hinting = "full"
+edging = "antialias"
+
+# Monaspace Neon throughout — one calm family, its own clean italic.
+[[font.normal]]
+family = "MonaspiceNe Nerd Font"
+style = "Normal"
+
+[[font.bold]]
+family = "MonaspiceNe Nerd Font"
+style = "Bold"
+
+[[font.italic]]
+family = "MonaspiceNe Nerd Font"
+style = "Italic"
+
+[[font.bold_italic]]
+family = "MonaspiceNe Nerd Font"
+style = "Bold Italic"
+
+# calt = texture healing (never disable), liga = repeat spacing, ss03 = arrows.
+# Other symbol ligatures stay off so you always see the real characters.
+[font.features]
+"MonaspiceNe Nerd Font" = ["+calt", "+liga", "+ss03"]
+
+[box-drawing]
+mode = "native"

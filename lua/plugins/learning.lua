@@ -3,8 +3,8 @@
 -- =============================================================================
 -- Strips away IDE-heavy features to create a focused Python learning environment.
 -- Keeps: treesitter, completion, auto-save, terminal
--- Simplifies: bufferline, lualine, noice, gitsigns, animations
--- Disables: zen-mode, twilight, mini.animate (caused window management conflicts)
+-- Simplifies: bufferline, lualine, noice, gitsigns
+-- Disables: zen-mode, twilight (caused window management conflicts)
 
 return {
   -- Hide the buffer tab bar (single-file focus for learning)
@@ -14,10 +14,39 @@ return {
       options = {
         always_show_bufferline = false,
       },
+      -- no italics anywhere, including the active tab
+      highlights = (function()
+        local groups = {}
+        for _, name in ipairs({
+          "buffer_selected",
+          "numbers_selected",
+          "diagnostic_selected",
+          "hint_selected",
+          "hint_diagnostic_selected",
+          "info_selected",
+          "info_diagnostic_selected",
+          "warning_selected",
+          "warning_diagnostic_selected",
+          "error_selected",
+          "error_diagnostic_selected",
+          "pick_selected",
+          "pick_visible",
+          "pick",
+          "duplicate_selected",
+          "duplicate_visible",
+          "duplicate",
+          "buffer_visible",
+          "numbers_visible",
+        }) do
+          groups[name] = { italic = false }
+        end
+        return groups
+      end)(),
     },
   },
 
-  -- Minimal status line: just filename + position
+  -- Minimal status line: mode + filename + position. The mode pill matters
+  -- most while learning: it always says whether keys type text or give commands.
   {
     "nvim-lualine/lualine.nvim",
     opts = function(_, opts)
@@ -26,7 +55,9 @@ return {
       opts.options.section_separators = { left = "", right = "" }
 
       opts.sections = {
-        lualine_a = {},
+        lualine_a = {
+          { "mode", padding = { left = 1, right = 1 } },
+        },
         lualine_b = {},
         lualine_c = {
           {
@@ -55,12 +86,6 @@ return {
         lualine_z = {},
       }
     end,
-  },
-
-  -- Disable mini.animate (faster, less visual noise)
-  {
-    "mini.animate",
-    enabled = false,
   },
 
   -- Disable gitsigns for learning (no git gutter noise)

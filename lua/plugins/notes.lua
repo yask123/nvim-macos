@@ -1,10 +1,12 @@
 return {
-  -- Zen-mode and twilight disabled in plugins/learning.lua
-
-  -- Render Markdown: Aesthetic rendering
+  -- Render Markdown: headings, checkboxes, callouts and tables drawn in place.
+  -- The raw text reappears on the cursor line (anti-conceal) so editing stays easy.
   {
     "MeanderingProgrammer/render-markdown.nvim",
     opts = {
+      preset = "obsidian",
+      checkbox = { enabled = true }, -- LazyVim's markdown extra turns these off
+      completions = { lsp = { enabled = true } },
       code = {
         sign = false,
         width = "block",
@@ -12,71 +14,54 @@ return {
       },
       heading = {
         sign = false,
+        width = "block",
         icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
       },
     },
-    ft = { "markdown", "norg", "rmd", "org" },
-    config = function(_, opts)
-      require("render-markdown").setup(opts)
-    end,
   },
 
-  -- 4. Obsidian.nvim: Note management
+  -- Obsidian-style notes in ~/notes (maintained community fork).
+  -- Completion comes from its built-in LSP, so no blink source is needed.
   {
-    "epwalsh/obsidian.nvim",
+    "obsidian-nvim/obsidian.nvim",
     version = "*",
-    lazy = true,
-    cmd = {
-      "ObsidianNew",
-      "ObsidianSearch",
-      "ObsidianQuickSwitch",
-      "ObsidianToday",
-      "ObsidianTemplate",
-      "ObsidianLinks",
-      "ObsidianBacklinks",
-      "ObsidianOpen",
-    },
     ft = "markdown",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      -- "hrsh7th/nvim-cmp", -- Removed: User uses blink.cmp
-    },
+    cmd = "Obsidian",
     init = function()
       vim.api.nvim_create_user_command("Notes", function()
         local actions = {
-          { label = "Find note", cmd = "ObsidianQuickSwitch" },
-          { label = "Search notes (grep)", cmd = "ObsidianSearch" },
-          { label = "Daily note (today)", cmd = "ObsidianToday" },
-          { label = "New note", cmd = "ObsidianNew" },
-          { label = "Insert template", cmd = "ObsidianTemplate" },
-          { label = "Show links", cmd = "ObsidianLinks" },
-          { label = "Show backlinks", cmd = "ObsidianBacklinks" },
+          { label = "Find note", cmd = "Obsidian quick_switch" },
+          { label = "Search notes (grep)", cmd = "Obsidian search" },
+          { label = "Daily note (today)", cmd = "Obsidian today" },
+          { label = "New note", cmd = "Obsidian new" },
+          { label = "Insert template", cmd = "Obsidian template" },
+          { label = "Show links", cmd = "Obsidian links" },
+          { label = "Show backlinks", cmd = "Obsidian backlinks" },
         }
-
         vim.ui.select(actions, {
           prompt = "Notes",
           format_item = function(item)
             return item.label
           end,
         }, function(choice)
-          if not choice then
-            return
+          if choice then
+            vim.cmd(choice.cmd)
           end
-          vim.cmd(choice.cmd)
         end)
       end, { desc = "Notes menu (Obsidian)" })
     end,
     keys = {
-      { "<leader>nn", "<cmd>ObsidianNew<cr>", desc = "New Note" },
-      { "<leader>ns", "<cmd>ObsidianSearch<cr>", desc = "Search Notes (Grep)" },
-      { "<leader>nf", "<cmd>ObsidianQuickSwitch<cr>", desc = "Find Note (File)" },
-      { "<leader>nd", "<cmd>ObsidianToday<cr>", desc = "Daily Note" },
-      { "<leader>nt", "<cmd>ObsidianTemplate<cr>", desc = "Insert Template" },
-      { "<leader>nl", "<cmd>ObsidianLinks<cr>", desc = "Show Links" },
-      { "<leader>nb", "<cmd>ObsidianBacklinks<cr>", desc = "Show Backlinks" },
+      { "<leader>nn", "<cmd>Obsidian new<cr>", desc = "New Note" },
+      { "<leader>ns", "<cmd>Obsidian search<cr>", desc = "Search Notes (Grep)" },
+      { "<leader>nf", "<cmd>Obsidian quick_switch<cr>", desc = "Find Note (File)" },
+      { "<leader>nd", "<cmd>Obsidian today<cr>", desc = "Daily Note" },
+      { "<leader>nt", "<cmd>Obsidian template<cr>", desc = "Insert Template" },
+      { "<leader>nl", "<cmd>Obsidian links<cr>", desc = "Show Links" },
+      { "<leader>nb", "<cmd>Obsidian backlinks<cr>", desc = "Show Backlinks" },
       { "<leader>nH", "<cmd>Notes<cr>", desc = "Notes Home" },
     },
     opts = {
+      legacy_commands = false,
       workspaces = {
         {
           name = "notes",
@@ -89,58 +74,20 @@ return {
         alias_format = "%B %-d, %Y",
       },
       completion = {
-        nvim_cmp = false, -- Disabled to prevent crash with blink.cmp
         min_chars = 2,
       },
-      mappings = {
-        ["gf"] = {
-          action = function()
-            return require("obsidian").util.gf_passthrough()
-          end,
-          opts = { noremap = false, expr = true, buffer = true },
-        },
-        ["<leader>ch"] = {
-          action = function()
-            return require("obsidian").util.toggle_checkbox()
-          end,
-          opts = { buffer = true },
-        },
-      },
-      ui = {
-        enable = false,
+      picker = { name = "snacks.picker" },
+      ui = { enable = false }, -- render-markdown draws the notes
+      callbacks = {
+        enter_note = function()
+          vim.keymap.set(
+            "n",
+            "<leader>ch",
+            "<cmd>Obsidian toggle_checkbox<cr>",
+            { buffer = true, desc = "Toggle checkbox" }
+          )
+        end,
       },
     },
-  },
-
-  -- 5. Blink Compatibility (for Obsidian completion)
-  {
-    "saghen/blink.compat",
-    lazy = true,
-    opts = {},
-    version = "*",
-  },
-
-  -- 6. Configure Blink to use Obsidian source
-  {
-    "saghen/blink.cmp",
-    dependencies = { "saghen/blink.compat" },
-    opts = function(_, opts)
-      -- Ensure sources table exists
-      opts.sources = opts.sources or {}
-      opts.sources.default = opts.sources.default or {}
-
-      -- Add obsidian to the default sources list if not present
-      if not vim.tbl_contains(opts.sources.default, "obsidian") then
-        table.insert(opts.sources.default, "obsidian")
-      end
-
-      -- Define the obsidian provider
-      opts.sources.providers = opts.sources.providers or {}
-      opts.sources.providers.obsidian = {
-        name = "obsidian",
-        module = "blink.compat.source",
-        score_offset = 100, -- Give it high priority in markdown
-      }
-    end,
   },
 }

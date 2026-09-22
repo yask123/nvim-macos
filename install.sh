@@ -6,12 +6,13 @@ repo_url="${NVIM_BOOTSTRAP_REPO:-https://github.com/yask123/nvim-macos.git}"
 repo_ref="${NVIM_BOOTSTRAP_REF:-main}"
 skip_brew=0
 skip_plugins=0
+with_app=1
 temporary_root=""
 user_home="${HOME:?HOME is not set}"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--skip-brew] [--skip-plugins]
+Usage: ./install.sh [--skip-brew] [--skip-plugins] [--no-app]
 
 Installs this Neovim setup on macOS. Existing Neovim config, data, state, and
 cache are moved to a timestamped backup before the clean clone is activated.
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-brew) skip_brew=1 ;;
     --skip-plugins) skip_plugins=1 ;;
+    --no-app) with_app=0 ;;
     -h | --help)
       usage
       exit 0
@@ -128,8 +130,17 @@ if [[ $skip_brew -eq 0 ]]; then
   if ! brew list --cask font-0xproto-nerd-font >/dev/null 2>&1 && font_file_exists '*0xProto*'; then
     append_cask_skip font-0xproto-nerd-font
   fi
+  if ! brew list --cask font-monaspice-nerd-font >/dev/null 2>&1 && font_file_exists '*MonaspiceNeNerdFont*'; then
+    append_cask_skip font-monaspice-nerd-font
+  fi
+  if ! brew list --cask neovide-app >/dev/null 2>&1 && [[ -d /Applications/Neovide.app ]]; then
+    append_cask_skip neovide-app
+  fi
+  if ! brew list --cask ghostty >/dev/null 2>&1 && [[ -d /Applications/Ghostty.app ]]; then
+    append_cask_skip ghostty
+  fi
   if [[ "$cask_skip" != "${HOMEBREW_BUNDLE_CASK_SKIP:-}" ]]; then
-    printf 'Matching manually installed fonts found; keeping them in place.\n'
+    printf 'Matching manually installed apps or fonts found; keeping them in place.\n'
   fi
 
   printf 'Installing command-line tools and fonts…\n'
@@ -202,11 +213,9 @@ fi
 
 if [[ $skip_plugins -eq 0 ]]; then
   printf 'Restoring pinned plugins and installing editor tools…\n'
-  nvim --headless \
-    "+Lazy! restore" \
+  "$target_config/scripts/restore-plugins.sh" "$target_config" \
     "+Lazy! load mason.nvim" \
-    "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')" \
-    "+qa"
+    "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')"
 fi
 
 if [[ $skip_plugins -eq 1 ]]; then
@@ -215,6 +224,12 @@ else
   "$target_config/scripts/doctor.sh"
 fi
 
-printf '\nNeovim is ready. Launch it with: nvim\n'
+if [[ $with_app -eq 1 && -d /Applications/Neovide.app ]]; then
+  printf '\nSetting up the Dojo app…\n'
+  "$target_config/scripts/setup-dojo.sh"
+  printf '\nDojo is ready. Open it from Spotlight ("Dojo") or run: dojo <folder>\n'
+else
+  printf '\nNeovim is ready. Launch it with: nvim\n'
+  printf 'For the Dojo app later, run: %s/scripts/setup-dojo.sh\n' "$target_config"
+fi
 printf 'Update this setup later with: nvim-update\n'
-printf 'For matching icons, choose JetBrains Mono plus 0xProto Nerd Font fallback in your terminal.\n'

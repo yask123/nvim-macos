@@ -21,37 +21,43 @@ return {
     },
   },
 
-  -- Multi-cursor support (Sublime Text / VSCode style)
-  -- Ctrl+n = select word, add next occurrence
-  -- Ctrl+Down/Up = add cursor below/above
-  -- n/N = get next/prev occurrence
-  -- q = skip current and get next
-  -- Q = remove current cursor
+  -- Multiple cursors, VS Code style:
+  --   ⌘D / Ctrl-n  add the next match of the word (or selection)
+  --   ⌘⇧L          add every match
+  --   ⌘⌥↑ / ⌘⌥↓    add a cursor above / below
+  --   Esc          clear the extra cursors
+  -- Edit with normal Vim commands; every cursor follows along.
   {
-    "mg979/vim-visual-multi",
-    branch = "master",
+    "jake-stewart/multicursor.nvim",
+    branch = "1.0",
     event = "VeryLazy",
-    init = function()
-      vim.g.VM_maps = {
-        ["Find Under"] = "<C-n>", -- Select word, add next match
-        ["Find Subword Under"] = "<C-n>", -- Same for subwords
-        ["Select All"] = "\\A", -- Select all occurrences (backslash + A)
-        ["Add Cursor Down"] = "<C-Down>", -- Add cursor below
-        ["Add Cursor Up"] = "<C-Up>", -- Add cursor above
-      }
-      vim.g.VM_theme = "iceblue"
+    config = function()
+      local mc = require("multicursor-nvim")
+      mc.setup()
+      local set = vim.keymap.set
+      -- ⌘D / ⌘⇧L are wired through the Dojo registry (lua/dojo/keys.lua).
+      set({ "n", "x" }, "<C-n>", function()
+        mc.matchAddCursor(1)
+      end, { desc = "Add cursor at next match" })
+      set({ "n", "x", "i" }, "<D-M-Up>", function()
+        mc.lineAddCursor(-1)
+      end, { desc = "Add cursor above" })
+      set({ "n", "x", "i" }, "<D-M-Down>", function()
+        mc.lineAddCursor(1)
+      end, { desc = "Add cursor below" })
+      set("n", "<C-LeftMouse>", mc.handleMouse, { desc = "Add cursor at click" })
+      set("n", "<C-LeftDrag>", mc.handleMouseDrag)
+      set("n", "<C-LeftRelease>", mc.handleMouseRelease)
+      mc.addKeymapLayer(function(layer)
+        layer("n", "<Esc>", function()
+          if not mc.cursorsEnabled() then
+            mc.enableCursors()
+          else
+            mc.clearCursors()
+          end
+        end)
+      end)
     end,
-  },
-
-  -- Add mini.comment for commenting functionality
-  {
-    "nvim-mini/mini.comment",
-    event = "VeryLazy",
-    opts = {
-      options = {
-        custom_commentstring = nil,
-      },
-    },
   },
 
   -- Toggleterm disabled — conflicts with zen-mode window management.
@@ -61,13 +67,8 @@ return {
     enabled = false,
   },
 
-  -- TypeScript support
-  -- moved to config/lazy.lua
-
-  -- Python support with basedpyright LSP
-  -- moved to config/lazy.lua
-
-  -- Auto-save like VSCode/Zed
+  -- Auto-save like VSCode/Zed. Background saves skip format-on-save (so code
+  -- isn't reformatted a second after every pause); an explicit ⌘S / :w formats.
   {
     "okuuva/auto-save.nvim",
     version = "^1.0.0",
@@ -84,5 +85,26 @@ return {
       write_all_buffers = false,
       debounce_delay = 1000,
     },
+    init = function()
+      local group = vim.api.nvim_create_augroup("DojoAutoSaveNoFormat", { clear = true })
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "AutoSaveWritePre",
+        callback = function(ev)
+          local buf = ev.data and ev.data.saved_buffer or vim.api.nvim_get_current_buf()
+          vim.b[buf].dojo_autoformat = vim.b[buf].autoformat
+          vim.b[buf].autoformat = false
+        end,
+      })
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "AutoSaveWritePost",
+        callback = function(ev)
+          local buf = ev.data and ev.data.saved_buffer or vim.api.nvim_get_current_buf()
+          vim.b[buf].autoformat = vim.b[buf].dojo_autoformat
+          vim.b[buf].dojo_autoformat = nil
+        end,
+      })
+    end,
   },
 }
