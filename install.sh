@@ -12,7 +12,7 @@ user_home="${HOME:?HOME is not set}"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--skip-brew] [--skip-plugins] [--no-app]
+Usage: ./install.sh [--skip-brew] [--skip-plugins] [--no-app] [--ref <tag>]
 
 Installs this Neovim setup on macOS. Existing Neovim config, data, state, and
 cache are moved to a timestamped backup before the clean clone is activated.
@@ -28,6 +28,14 @@ while [[ $# -gt 0 ]]; do
     --skip-brew) skip_brew=1 ;;
     --skip-plugins) skip_plugins=1 ;;
     --no-app) with_app=0 ;;
+    --ref)
+      [[ $# -ge 2 ]] || {
+        usage >&2
+        exit 2
+      }
+      repo_ref="$2"
+      shift
+      ;;
     -h | --help)
       usage
       exit 0
@@ -81,7 +89,10 @@ script_source="${BASH_SOURCE[0]:-}"
 source_dir=""
 if [[ -n "$script_source" && -f "$script_source" ]]; then
   candidate_dir="$(CDPATH='' cd -- "$(dirname -- "$script_source")" && pwd)"
-  if [[ -f "$candidate_dir/Brewfile" && -f "$candidate_dir/init.lua" ]]; then
+  # Use this copy only if it is a Git checkout of its own; a release archive
+  # (the Homebrew cask) installs the matching tag from GitHub instead.
+  if [[ -f "$candidate_dir/Brewfile" && -f "$candidate_dir/init.lua" ]] &&
+    [[ "$(git -C "$candidate_dir" rev-parse --show-toplevel 2>/dev/null)" == "$(cd -P -- "$candidate_dir" && pwd)" ]]; then
     source_dir="$candidate_dir"
   fi
 fi
@@ -124,12 +135,6 @@ if [[ $skip_brew -eq 0 ]]; then
   fi
 
   cask_skip="${HOMEBREW_BUNDLE_CASK_SKIP:-}"
-  if ! brew list --cask font-jetbrains-mono >/dev/null 2>&1 && font_file_exists '*JetBrainsMono*'; then
-    append_cask_skip font-jetbrains-mono
-  fi
-  if ! brew list --cask font-0xproto-nerd-font >/dev/null 2>&1 && font_file_exists '*0xProto*'; then
-    append_cask_skip font-0xproto-nerd-font
-  fi
   if ! brew list --cask font-monaspice-nerd-font >/dev/null 2>&1 && font_file_exists '*MonaspiceNeNerdFont*'; then
     append_cask_skip font-monaspice-nerd-font
   fi
@@ -200,7 +205,7 @@ backup_path "$target_data" data
 backup_path "$target_state" state
 backup_path "$target_cache" cache
 
-mkdir -p "$config_home" "$data_home" "$state_home" "$cache_home" "$user_home/notes/dailies"
+mkdir -p "$config_home" "$data_home" "$state_home" "$cache_home"
 mv -- "$staged_config" "$target_config"
 
 user_bin="$user_home/.local/bin"

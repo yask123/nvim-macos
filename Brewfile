@@ -13,8 +13,6 @@ brew "python"
 brew "uv"
 brew "lua"
 
-cask "font-jetbrains-mono"
-cask "font-0xproto-nerd-font"
 cask "font-monaspice-nerd-font"
 cask "neovide-app"
 cask "ghostty"

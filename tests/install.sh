@@ -43,14 +43,11 @@ printf 'state\n' >"$XDG_STATE_HOME/nvim/sentinel"
 printf 'cache\n' >"$XDG_CACHE_HOME/nvim/sentinel"
 printf 'keep\n' >"$HOME/Documents/Folio/keep.txt"
 printf 'keep\n' >"$HOME/.vim/keep.txt"
-touch "$HOME/Library/Fonts/JetBrainsMono-Regular.ttf"
-touch "$HOME/Library/Fonts/0xProtoNerdFontMono-Regular.ttf"
 
 "$repo_root/install.sh" --skip-brew --skip-plugins --no-app
 
 [[ -f "$XDG_CONFIG_HOME/nvim/init.lua" ]]
 [[ -x "$HOME/.local/bin/nvim-update" ]]
-[[ -d "$HOME/notes/dailies" ]]
 [[ -f "$HOME/Documents/Folio/keep.txt" ]]
 [[ -f "$HOME/.vim/keep.txt" ]]
 

@@ -31,9 +31,7 @@ if ! "$test_config/scripts/restore-plugins.sh" "$test_config" >"$restore_log" 2>
 fi
 nvim -u NONE --headless -l "$test_config/tests/treesitter.lua"
 nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/smoke.lua"
-nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/tutor.lua"
 nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/dojo.lua"
-python3 "$test_config/tests/test_openai_tutor.py"
 printf '\n'
 
 if ! cmp -s "$repo_root/lazy-lock.json" "$test_config/lazy-lock.json"; then

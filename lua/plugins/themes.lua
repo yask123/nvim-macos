@@ -8,7 +8,7 @@ return {
     },
   },
 
-  -- Popular, eye-friendly themes (dark + light variants)
+  -- A short, curated set. Each follows macOS light/dark on its own.
 
   -- Catppuccin: Mocha after dark, Latte by day — follows macOS automatically.
   -- Use `colorscheme catppuccin` (never a flavour name) so Neovide and the
@@ -79,7 +79,7 @@ return {
             SnacksPickerListTitle = { fg = c.subtext0, bg = c.mantle },
             SnacksPickerPreviewTitle = { fg = c.subtext0, bg = c.mantle },
             SnacksPickerBoxTitle = { fg = c.subtext0, bg = c.mantle },
-            SnacksDashboardHeader = { fg = c.lavender },
+            SnacksDashboardHeader = { fg = c.text },
           }
         end,
         latte = function(c)
@@ -107,17 +107,6 @@ return {
       commentStyle = { italic = false },
       keywordStyle = { italic = false },
     },
-  },
-
-  -- Kanagawa (wave/dragon/lotus)
-  {
-    "rebelot/kanagawa.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = {},
-    config = function(_, opts)
-      require("kanagawa").setup(opts)
-    end,
   },
 
   -- Rosé Pine: the Dojo default. Moon after dark, Dawn by day (follows macOS).
@@ -148,7 +137,7 @@ return {
         SnacksPickerInputTitle = { fg = "subtle", bg = "surface" },
         SnacksPickerListTitle = { fg = "subtle", bg = "surface" },
         SnacksPickerPreviewTitle = { fg = "subtle", bg = "surface" },
-        SnacksDashboardHeader = { fg = "iris" },
+        SnacksDashboardHeader = { fg = "text" },
         SpellBad = { sp = "muted", undercurl = true },
         SpellCap = {},
         SpellRare = {},
@@ -157,28 +146,6 @@ return {
     },
     config = function(_, opts)
       require("rose-pine").setup(opts)
-    end,
-  },
-
-  -- GitHub theme (great light variants like github_light)
-  {
-    "projekt0n/github-nvim-theme",
-    lazy = false,
-    priority = 1000,
-    opts = {},
-    config = function(_, opts)
-      require("github-theme").setup(opts)
-    end,
-  },
-
-  -- Nightfox family (nightfox/dayfox/dawnfox/duskfox/etc.)
-  {
-    "EdenEast/nightfox.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = {},
-    config = function(_, opts)
-      require("nightfox").setup(opts)
     end,
   },
 }

@@ -1,4 +1,4 @@
--- Dojo: a calm, learnable, VS Code-flavoured layer over LazyVim.
+-- Dojo: a calm, VS Code-flavoured layer over LazyVim.
 -- Keys live in lua/dojo/keys.lua; this file wires them up.
 
 local M = {}
@@ -92,11 +92,11 @@ function M.setup()
   M.map_keys()
   require("dojo.cheatsheet").highlights()
   require("dojo.project").title()
-  require("dojo.learn").setup()
   require("dojo.writing").setup()
   require("dojo.folds").setup()
   require("dojo.polish").setup()
   require("dojo.sfx").setup()
+  require("dojo.dim").setup()
 
   local group = vim.api.nvim_create_augroup("Dojo", { clear = true })
   vim.api.nvim_create_autocmd("ColorScheme", {

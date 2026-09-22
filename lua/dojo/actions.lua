@@ -281,26 +281,6 @@ function M.problems()
   vim.cmd("Trouble diagnostics toggle")
 end
 
-function M.tutor()
-  local mode = vim.fn.mode()
-  local tutor = require("config.tutor")
-  if mode:match("^[vV\22]") then
-    tutor.ask_selection()
-  else
-    normal_mode()
-    tutor.ask_file()
-  end
-end
-
-function M.claude()
-  normal_mode()
-  if vim.fn.exists(":ClaudeCode") == 2 then
-    vim.cmd("ClaudeCode")
-  else
-    vim.notify("Claude Code is not installed (`claude` command)", vim.log.levels.WARN, { title = "Dojo" })
-  end
-end
-
 -- Search ------------------------------------------------------------------
 
 -- Type text into the command line literally (no <Key> translation).
@@ -393,13 +373,6 @@ function M.toggle_wrap()
   vim.notify("Word wrap " .. (vim.wo.wrap and "on" or "off"), vim.log.levels.INFO, { title = "Dojo" })
 end
 
-function M.markdown_preview()
-  normal_mode()
-  if vim.fn.exists(":RenderMarkdown") == 2 then
-    vim.cmd("RenderMarkdown toggle")
-  end
-end
-
 function M.theme()
   normal_mode()
   require("dojo.theme").pick()
@@ -429,12 +402,12 @@ function M.zoom_reset()
   scale(0)
 end
 
-function M.toggle_sound()
-  require("dojo.sfx").toggle()
+function M.toggle_dim()
+  require("dojo.dim").toggle()
 end
 
-function M.toggle_vfx()
-  require("dojo.gui").toggle_vfx()
+function M.toggle_sound()
+  require("dojo.sfx").toggle()
 end
 
 -- Folds --------------------------------------------------------------------
@@ -457,44 +430,6 @@ end
 function M.unfold_all()
   normal_mode()
   require("dojo.folds").unfold_all()
-end
-
--- Learn --------------------------------------------------------------------
-
-function M.vim_tutor()
-  normal_mode()
-  require("dojo.learn").vim_tutor()
-end
-
-function M.learn_menu()
-  normal_mode()
-  require("dojo.learn").menu()
-end
-
-function M.motions_game()
-  normal_mode()
-  vim.cmd("VimBeGood")
-end
-
-function M.typing_game()
-  normal_mode()
-  vim.cmd("Typr")
-end
-
-function M.toggle_hints()
-  require("dojo.learn").toggle_hints()
-end
-
-function M.toggle_showkeys()
-  require("dojo.learn").toggle_showkeys()
-end
-
-function M.toggle_hardtime()
-  require("dojo.learn").toggle_hardtime()
-end
-
-function M.hardtime_report()
-  require("dojo.learn").hardtime_report()
 end
 
 return M

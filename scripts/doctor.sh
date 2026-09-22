@@ -93,20 +93,6 @@ font_file_exists() {
   return 1
 }
 
-if { command -v brew >/dev/null 2>&1 && brew list --cask font-jetbrains-mono >/dev/null 2>&1; } ||
-  font_file_exists '*JetBrainsMono*'; then
-  ok "JetBrains Mono font"
-else
-  fail "JetBrains Mono font is missing"
-fi
-
-if { command -v brew >/dev/null 2>&1 && brew list --cask font-0xproto-nerd-font >/dev/null 2>&1; } ||
-  font_file_exists '*0xProto*'; then
-  ok "0xProto Nerd Font"
-else
-  fail "0xProto Nerd Font is missing"
-fi
-
 if { command -v brew >/dev/null 2>&1 && brew list --cask font-monaspice-nerd-font >/dev/null 2>&1; } ||
   font_file_exists '*MonaspiceNeNerdFont*'; then
   ok "Monaspice (Monaspace Neon) Nerd Font"
@@ -172,13 +158,15 @@ else
   warn "$config_dir is not a Git checkout"
 fi
 
-if [[ -d "$user_home/notes" ]]; then
-  ok "notes workspace"
-else
-  warn "$user_home/notes is absent; Obsidian commands will have no workspace"
+if [[ "$(uname -s)" == Darwin ]]; then
+  if command -v swiftc >/dev/null 2>&1; then
+    ok "swiftc (typing sounds, desktop dimming)"
+  else
+    warn "swiftc is missing (xcode-select --install); typing sounds and desktop dimming stay off"
+  fi
 fi
 
-for optional_command in claude go cargo; do
+for optional_command in go cargo; do
   if command -v "$optional_command" >/dev/null 2>&1; then
     ok "$optional_command (optional)"
   else

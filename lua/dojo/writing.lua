@@ -1,5 +1,5 @@
--- Reading & writing comfort for prose (notes, commit messages): soft wrap,
--- hanging list indents, spelling. Code wrapping lives in config/options.lua;
+-- Reading & writing comfort for prose (notes, commit messages): soft wrap
+-- and hanging list indents. Code wrapping lives in config/options.lua;
 -- ⌘K Z (zen) gives a calm centred page when you want one.
 
 local M = {}
@@ -13,10 +13,6 @@ function M.setup()
     callback = function()
       vim.opt_local.wrap = true
       vim.opt_local.linebreak = true
-      vim.opt_local.colorcolumn = ""
-      vim.opt_local.spell = true
-      vim.opt_local.spelllang = { "en_us" }
-      vim.opt_local.showbreak = "NONE" -- an empty local value would fall back to the global ↪
       vim.opt_local.breakindentopt = "list:-1,min:40" -- wrapped list items hang after "- " / "1. "
     end,
   })
