@@ -43,8 +43,6 @@ printf 'state\n' >"$XDG_STATE_HOME/nvim/sentinel"
 printf 'cache\n' >"$XDG_CACHE_HOME/nvim/sentinel"
 printf 'keep\n' >"$HOME/Documents/Folio/keep.txt"
 printf 'keep\n' >"$HOME/.vim/keep.txt"
-touch "$HOME/Library/Fonts/JetBrainsMono-Regular.ttf"
-touch "$HOME/Library/Fonts/0xProtoNerdFontMono-Regular.ttf"
 
 "$repo_root/install.sh" --skip-brew --skip-plugins --no-app
 

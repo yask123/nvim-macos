@@ -93,20 +93,6 @@ font_file_exists() {
   return 1
 }
 
-if { command -v brew >/dev/null 2>&1 && brew list --cask font-jetbrains-mono >/dev/null 2>&1; } ||
-  font_file_exists '*JetBrainsMono*'; then
-  ok "JetBrains Mono font"
-else
-  fail "JetBrains Mono font is missing"
-fi
-
-if { command -v brew >/dev/null 2>&1 && brew list --cask font-0xproto-nerd-font >/dev/null 2>&1; } ||
-  font_file_exists '*0xProto*'; then
-  ok "0xProto Nerd Font"
-else
-  fail "0xProto Nerd Font is missing"
-fi
-
 if { command -v brew >/dev/null 2>&1 && brew list --cask font-monaspice-nerd-font >/dev/null 2>&1; } ||
   font_file_exists '*MonaspiceNeNerdFont*'; then
   ok "Monaspice (Monaspace Neon) Nerd Font"

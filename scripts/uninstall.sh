@@ -39,6 +39,28 @@ move_path() {
   fi
 }
 
+# Dojo's desktop pieces: only links and files this setup created.
+points_into_config() {
+  [[ -L "$1" && "$(readlink "$1")" == "$target_config"/* ]]
+}
+for link in "$config_home/neovide/config.toml" "$config_home/ghostty/config" "$user_home/.local/bin/dojo"; do
+  if points_into_config "$link"; then
+    rm -f -- "$link"
+    printf 'Removed %s\n' "$link"
+  fi
+done
+updater="$user_home/.local/bin/nvim-update"
+if [[ -f "$updater" ]] && grep -q "restore-plugins.sh" "$updater"; then
+  rm -f -- "$updater"
+  printf 'Removed %s\n' "$updater"
+fi
+app="$user_home/Applications/Dojo.app"
+if [[ -d "$app" && -x /usr/libexec/PlistBuddy ]] &&
+  [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" == "dev.dojo.launcher" ]]; then
+  rm -rf -- "$app"
+  printf 'Removed %s\n' "$app"
+fi
+
 move_path "$target_config" config
 move_path "$target_data" data
 move_path "$target_state" state
