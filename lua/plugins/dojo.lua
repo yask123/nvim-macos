@@ -67,10 +67,19 @@ return {
       completion = {
         menu = { scrollbar = false },
         documentation = { auto_show = true, auto_show_delay_ms = 200 },
-        ghost_text = { enabled = true },
       },
       signature = { enabled = true },
     },
+  },
+  -- Suggestions from the language server, file paths and words in the file.
+  -- No snippet packs (they fuzzy-match everything: "Ani" → assertNotIn) and
+  -- no grey preview text. A function, so it replaces LazyVim's lists.
+  {
+    "saghen/blink.cmp",
+    opts = function(_, opts)
+      opts.sources.default = { "lsp", "path", "buffer" }
+      opts.completion.ghost_text = { enabled = false }
+    end,
   },
 
   -- One signature popup (blink's), not two.
