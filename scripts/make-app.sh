@@ -39,11 +39,15 @@ rm -rf -- "$app"
 osacompile -o "$app" "$work/Dojo.applescript"
 
 plist="$app/Contents/Info.plist"
-cp "$config_dir/extras/dojo/Dojo.icns" "$app/Contents/Resources/droplet.icns"
+# The icon file is named after its content hash: launchers that cache icons by
+# name (Raycast, Alfred) then pick up a new icon as soon as it changes.
+icon_name="Dojo-$(shasum "$config_dir/extras/dojo/Dojo.icns" | cut -c1-8)"
+cp "$config_dir/extras/dojo/Dojo.icns" "$app/Contents/Resources/$icon_name.icns"
+rm -f "$app/Contents/Resources/droplet.icns"
 rm -f "$app/Contents/Resources/Assets.car"
 /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile droplet" "$plist" 2>/dev/null ||
-  /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string droplet" "$plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile $icon_name" "$plist" 2>/dev/null ||
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $icon_name" "$plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string dev.dojo.launcher" "$plist" 2>/dev/null ||
   /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.dojo.launcher" "$plist"
 /usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "$plist" 2>/dev/null ||
