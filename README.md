@@ -62,11 +62,20 @@ keys.
 
 ## Install on a fresh Mac
 
-One command:
+With Homebrew:
+
+```bash
+brew install --cask yask123/dojo/dojo
+```
+
+Or without Homebrew (the script installs it):
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"
 ```
+
+If Neovide or the Monaspice font is already installed by hand, let Homebrew
+adopt it first: `brew install --cask --adopt neovide-app font-monaspice-nerd-font`.
 
 The first run may ask for Apple Command Line Tools or Homebrew permissions.
 Rerun the same command after completing an Apple system prompt. When it

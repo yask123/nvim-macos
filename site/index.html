@@ -34,7 +34,9 @@
   .icon { width: 88px; height: 88px; }
   h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; margin: 20px 0 8px; }
   .lede { color: var(--muted); font-size: 18px; margin: 0 auto; max-width: 30em; }
-  .install { margin: 44px 0 12px; }
+  .install { margin: 44px 0 14px; }
+  .label { color: var(--faint); font-size: 13px; margin: 18px 0 8px 4px; }
+  .label:first-child { margin-top: 0; }
   .cmd {
     display: flex; align-items: center; gap: 12px;
     background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
@@ -69,6 +71,7 @@
     color: var(--faint); margin: 0 0 8px; }
   footer { margin-top: 72px; color: var(--faint); font-size: 13.5px; text-align: center; }
   footer a { color: var(--muted); }
+  footer code { font: 12.5px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); }
   @media (max-width: 640px) {
     main { padding-top: 64px; }
     h1 { font-size: 32px; }
@@ -86,14 +89,20 @@
   </header>
 
   <section class="install" aria-label="Install">
+    <p class="label">With Homebrew</p>
     <div class="cmd">
-      <code id="cmd">bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"</code>
-      <button type="button" id="copy">Copy</button>
+      <code id="brew">brew install --cask yask123/dojo/dojo</code>
+      <button type="button" data-copy="brew">Copy</button>
+    </div>
+    <p class="label">Or in Terminal, without Homebrew</p>
+    <div class="cmd">
+      <code id="curl">bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"</code>
+      <button type="button" data-copy="curl">Copy</button>
     </div>
   </section>
-  <p class="hint">Paste into Terminal. Installs everything it needs, backs up any existing Neovim setup, then open <strong>Dojo</strong> from Spotlight.</p>
+  <p class="hint">Installs everything it needs and backs up any existing Neovim setup. Then open <strong>Dojo</strong> from Spotlight.</p>
 
-  <img class="shot" src="screenshot.png" alt="Dojo showing a project: a file tree on the left and a Lua file on the right">
+  <img class="shot" src="screenshot.png" alt="Dojo showing a Python project: a quiet file tree on the left, code on the right, and a one-line status bar">
 
   <section class="points">
     <div><h2>Keys you already know</h2><p>⌘P, ⌘⇧F, F12, ⌘/. ⌘K ⌘S shows them all, with the Vim way beside each.</p></div>
@@ -115,20 +124,22 @@
 
   <footer>
     Built on <a href="https://neovim.io">Neovim</a>, <a href="https://www.lazyvim.org">LazyVim</a> and <a href="https://neovide.dev">Neovide</a> · macOS ·
-    <a href="https://github.com/yask123/nvim-macos">Source &amp; uninstall</a>
+    <a href="https://github.com/yask123/nvim-macos">Source</a> ·
+    Update with <code>nvim-update</code> · Remove with <code>brew uninstall --cask dojo</code>
   </footer>
 </main>
 <script>
-  const button = document.getElementById("copy");
-  button.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(document.getElementById("cmd").textContent);
-      button.textContent = "Copied";
-    } catch {
-      button.textContent = "Select & copy";
-    }
-    setTimeout(() => (button.textContent = "Copy"), 1600);
-  });
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Select & copy";
+      }
+      setTimeout(() => (button.textContent = "Copy"), 1600);
+    });
+  }
 </script>
 </body>
 </html>
