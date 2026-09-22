@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dojo — a calm code editor for macOS</title>
+<meta name="description" content="Neovim as a calm desktop editor. Opens like VS Code, speaks Cmd, and teaches you Vim as you go.">
+<meta property="og:title" content="Dojo — a calm code editor for macOS">
+<meta property="og:description" content="Neovim as a calm desktop editor. Opens like VS Code, speaks Cmd, and teaches you Vim as you go.">
+<meta property="og:image" content="screenshot.png">
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #232136; --surface: #2a273f; --text: #e0def4; --muted: #908caa;
+    --faint: #6e6a86; --accent: #c4a7e7; --rose: #ea9a97; --line: #393552;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf4ed; --surface: #f2e9e1; --text: #464261; --muted: #797593;
+      --faint: #9893a5; --accent: #907aa9; --rose: #a95956; --line: #dfdad9;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 96px 24px 64px; }
+  header { text-align: center; }
+  .icon { width: 88px; height: 88px; }
+  h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; margin: 20px 0 8px; }
+  .lede { color: var(--muted); font-size: 18px; margin: 0 auto; max-width: 30em; }
+  .install { margin: 44px 0 12px; }
+  .cmd {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 14px 14px 18px;
+  }
+  .cmd code {
+    flex: 1; overflow-x: auto; white-space: nowrap;
+    font: 13.5px/1.5 "JetBrains Mono", ui-monospace, monospace; color: var(--text);
+  }
+  .cmd code::before { content: "$ "; color: var(--faint); }
+  .cmd code { scrollbar-width: none; mask-image: linear-gradient(to right, #000 88%, transparent); }
+  .cmd code::-webkit-scrollbar { display: none; }
+  button {
+    font: 500 13px Inter, sans-serif; color: var(--bg); background: var(--accent);
+    border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; flex: none;
+  }
+  button:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+  .hint { color: var(--faint); font-size: 13.5px; text-align: center; margin: 0; }
+  .shot { display: block; width: 100%; height: auto; margin: 56px 0 64px; border-radius: 14px;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.55), 0 0 0 1px var(--line); }
+  .points { display: grid; gap: 28px; grid-template-columns: repeat(3, 1fr); margin-bottom: 64px; }
+  .points h2 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .points p { color: var(--muted); font-size: 14.5px; margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  td { padding: 9px 0; border-top: 1px solid var(--line); }
+  td:first-child { color: var(--muted); }
+  td kbd, td code { font: 13px "JetBrains Mono", ui-monospace, monospace; }
+  td kbd { color: var(--accent); }
+  td code { color: var(--rose); }
+  td:nth-child(2), td:nth-child(3) { text-align: right; white-space: nowrap; padding-left: 16px; }
+  h3 { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--faint); margin: 0 0 8px; }
+  footer { margin-top: 72px; color: var(--faint); font-size: 13.5px; text-align: center; }
+  footer a { color: var(--muted); }
+  @media (max-width: 640px) {
+    main { padding-top: 64px; }
+    h1 { font-size: 32px; }
+    .points { grid-template-columns: 1fr; gap: 20px; }
+    td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img class="icon" src="icon.png" alt="">
+    <h1>Dojo</h1>
+    <p class="lede">A calm code editor for macOS. Neovim that opens like VS Code, speaks the Cmd shortcuts you know, and quietly teaches you Vim as you go.</p>
+  </header>
+
+  <section class="install" aria-label="Install">
+    <div class="cmd">
+      <code id="cmd">bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"</code>
+      <button type="button" id="copy">Copy</button>
+    </div>
+  </section>
+  <p class="hint">Paste into Terminal. Installs everything it needs, backs up any existing Neovim setup, then open <strong>Dojo</strong> from Spotlight.</p>
+
+  <img class="shot" src="screenshot.png" alt="Dojo showing a project: a file tree on the left and a Lua file on the right">
+
+  <section class="points">
+    <div><h2>Keys you already know</h2><p>⌘P, ⌘⇧F, F12, ⌘/. Every shortcut shows its Vim twin, so you learn by doing.</p></div>
+    <div><h2>Read code top‑down</h2><p>Big files open as an outline. Fold in and out one level at a time.</p></div>
+    <div><h2>Quiet by design</h2><p>One family of type, one calm theme, no animation. It follows your Mac's light and dark.</p></div>
+  </section>
+
+  <section>
+    <h3>The essentials</h3>
+    <table>
+      <tr><td>Open a folder</td><td><kbd>⌘O</kbd></td><td><code>:cd</code></td></tr>
+      <tr><td>Find a file</td><td><kbd>⌘P</kbd></td><td><code>Space Space</code></td></tr>
+      <tr><td>Search the project</td><td><kbd>⌘⇧F</kbd></td><td><code>Space /</code></td></tr>
+      <tr><td>Go to definition</td><td><kbd>F12</kbd></td><td><code>gd</code></td></tr>
+      <tr><td>Run this file</td><td><kbd>⌘R</kbd></td><td><code>Space r r</code></td></tr>
+      <tr><td>Every shortcut</td><td><kbd>⌘K ⌘S</kbd></td><td><code>Space ?</code></td></tr>
+    </table>
+  </section>
+
+  <footer>
+    Built on <a href="https://neovim.io">Neovim</a>, <a href="https://www.lazyvim.org">LazyVim</a> and <a href="https://neovide.dev">Neovide</a> · macOS ·
+    <a href="https://github.com/yask123/nvim-macos">Source &amp; uninstall</a>
+  </footer>
+</main>
+<script>
+  const button = document.getElementById("copy");
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById("cmd").textContent);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Select & copy";
+    }
+    setTimeout(() => (button.textContent = "Copy"), 1600);
+  });
+</script>
+</body>
+</html>
