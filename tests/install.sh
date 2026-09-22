@@ -50,7 +50,6 @@ touch "$HOME/Library/Fonts/0xProtoNerdFontMono-Regular.ttf"
 
 [[ -f "$XDG_CONFIG_HOME/nvim/init.lua" ]]
 [[ -x "$HOME/.local/bin/nvim-update" ]]
-[[ -d "$HOME/notes/dailies" ]]
 [[ -f "$HOME/Documents/Folio/keep.txt" ]]
 [[ -f "$HOME/.vim/keep.txt" ]]
 

@@ -53,14 +53,14 @@ local function run()
       end
     end
   end
-  assert(entries > 100, "registry looks truncated: " .. entries)
+  assert(entries > 60, "registry looks truncated: " .. entries)
 
   -- The registry is actually mapped (Neovide and Ghostty both send Cmd as <D-…>).
   for lhs, desc in pairs({
     ["<D-p>"] = "Find file",
     ["<D-P>"] = "Command palette",
-    ["<D-F>"] = "Find in project (grep)",
-    ["<D-b>"] = "Toggle file explorer",
+    ["<D-F>"] = "Find in project",
+    ["<D-b>"] = "Show / hide the file tree",
     ["<D-r>"] = "Save & run this file",
     ["<D-/>"] = "Toggle comment",
     ["<D-k><D-s>"] = "Keyboard shortcuts (this sheet)",
@@ -91,11 +91,29 @@ local function run()
     win:close()
   end
 
+  -- The theme picker recolours while you browse and Esc puts yours back.
+  local theme = require("dojo.theme")
+  local before = vim.g.colors_name
+  theme.pick()
+  vim.wait(300)
+  local picker = Snacks.picker.get()[1]
+  assert(picker, "theme picker opens")
+  picker.list:move(4, true)
+  vim.wait(500, function()
+    return vim.g.colors_name ~= before
+  end)
+  assert(vim.g.colors_name:find(theme.themes[4].name, 1, true) == 1, "theme previews while browsing")
+  picker:close()
+  vim.wait(500, function()
+    return vim.g.colors_name == before
+  end)
+  assert_equal(vim.g.colors_name, before, "Esc restores the theme")
+
   -- The palette lists runnable actions, plus lessons when asked.
   local palette = require("dojo.palette")
   local runnable = palette.items()
   local with_lessons = palette.items({ lessons = true })
-  assert(#runnable > 40, "palette has too few actions: " .. #runnable)
+  assert(#runnable > 35, "palette has too few actions: " .. #runnable)
   assert(#with_lessons > #runnable, "lessons add entries to the palette")
   for _, item in ipairs(runnable) do
     assert(type(item.entry.run) == "function", "palette item without action: " .. item.entry.desc)
@@ -113,8 +131,14 @@ local function run()
   require("dojo.sfx").play("open")
   require("dojo.sfx").run_result(0)
 
+  -- Every curated theme loads.
+  for _, t in ipairs(theme.themes) do
+    local ok, err = pcall(vim.cmd.colorscheme, t.name)
+    assert(ok, "theme does not load: " .. t.name .. " " .. tostring(err))
+  end
+
   -- Commands exist.
-  for _, name in ipairs({ "Dojo", "DojoPalette", "DojoOpen", "DojoLearn", "VimTutor" }) do
+  for _, name in ipairs({ "Dojo", "DojoPalette", "DojoOpen" }) do
     assert_equal(vim.fn.exists(":" .. name), 2, "command " .. name)
   end
 

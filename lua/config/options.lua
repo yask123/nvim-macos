@@ -21,7 +21,7 @@ vim.g.lazyvim_python_ruff = "ruff"
 -- Note: This is handled in the LSP on_attach callback in python.lua
 
 -- =============================================================================
--- Learning-Focused Settings
+-- Reading comfort
 -- =============================================================================
 
 -- Keep cursor vertically centered — always see context above and below
@@ -29,18 +29,17 @@ vim.opt.scrolloff = 12
 vim.opt.sidescrolloff = 12
 
 -- Soft-wrap long lines at word boundaries (never hide code off-screen).
--- Continuation lines keep their indent and start with a subtle ↪.
+-- Continuation lines keep their indent, nudged in a little; no marker glyph.
 vim.opt.wrap = true
 vim.opt.linebreak = true
 vim.opt.breakindent = true
-vim.opt.breakindentopt = "shift:2,min:40,sbr"
-vim.opt.showbreak = "↪ "
+vim.opt.breakindentopt = "shift:2,min:40"
+vim.opt.showbreak = ""
 
 -- Always show where you are
 vim.opt.cursorline = true
 
--- No hard wrapping while typing: formatters own line length. Per-language
--- rulers are set in autocmds.lua; `gqap` still re-wraps prose on demand.
+-- No hard wrapping while typing and no rulers: formatters own line length.
 vim.opt.textwidth = 0
 vim.opt.colorcolumn = ""
 
@@ -50,7 +49,7 @@ vim.g.snacks_animate = false
 -- Borderless "card" floats (hover, completion docs, pickers).
 vim.o.winborder = "solid"
 
--- Absolute line numbers (simpler for learning — "error on line 15" is clear)
+-- Absolute line numbers ("error on line 15" is clear)
 vim.opt.number = true
 vim.opt.relativenumber = false
 
@@ -60,5 +59,5 @@ vim.opt.smoothscroll = true
 -- Show matching brackets
 vim.opt.showmatch = true
 
--- Neovide (the Dojo app): fonts, animation, cursor particles, padding.
+-- Neovide (the Dojo app): motion, padding, window chrome.
 require("dojo.gui").setup()

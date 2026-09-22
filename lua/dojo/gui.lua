@@ -46,45 +46,10 @@ function M.setup()
   g.neovide_cursor_smooth_blink = false -- smooth blink forces constant redraws
   g.neovide_cursor_antialiasing = true
 
-  -- Cursor particles are off; `Space u V` turns a subtle trail on for fun.
-  M.vfx = "pixiedust"
-  g.neovide_cursor_vfx_mode = ""
-  g.neovide_cursor_vfx_opacity = 120.0
-  g.neovide_cursor_vfx_particle_lifetime = 0.5
-  g.neovide_cursor_vfx_particle_density = 0.6
+  g.neovide_cursor_vfx_mode = "" -- no particles
 
   -- The 0.12 progress bar animates on every save; auto-save makes that noisy.
   g.neovide_progress_bar_enabled = false
-
-  M.load_tutor_key()
-end
-
--- Neovide starts Neovim from a login shell, which skips ~/.zshrc. Read the
--- Tutor's OpenAI key from the same Keychain item ~/.zshrc uses (async, and
--- only if it isn't already set).
-function M.load_tutor_key()
-  if vim.env.OPENAI_API_KEY and vim.env.OPENAI_API_KEY ~= "" then
-    return
-  end
-  local cmd =
-    { "/usr/bin/security", "find-generic-password", "-a", vim.env.USER or "", "-s", "nvim-openai-tutor", "-w" }
-  pcall(vim.system, cmd, { text = true }, function(result)
-    local key = result.code == 0 and vim.trim(result.stdout or "") or ""
-    if key ~= "" then
-      vim.schedule(function()
-        vim.env.OPENAI_API_KEY = key
-      end)
-    end
-  end)
-end
-
-function M.toggle_vfx()
-  if not vim.g.neovide then
-    return
-  end
-  local on = vim.g.neovide_cursor_vfx_mode ~= ""
-  vim.g.neovide_cursor_vfx_mode = on and "" or (M.vfx or "railgun")
-  vim.notify("Cursor particles " .. (on and "off" or "on"), vim.log.levels.INFO, { title = "Dojo" })
 end
 
 return M

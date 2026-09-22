@@ -200,7 +200,7 @@ backup_path "$target_data" data
 backup_path "$target_state" state
 backup_path "$target_cache" cache
 
-mkdir -p "$config_home" "$data_home" "$state_home" "$cache_home" "$user_home/notes/dailies"
+mkdir -p "$config_home" "$data_home" "$state_home" "$cache_home"
 mv -- "$staged_config" "$target_config"
 
 user_bin="$user_home/.local/bin"

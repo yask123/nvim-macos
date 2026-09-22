@@ -3,9 +3,8 @@
 -- Add any additional keymaps here
 
 -- =============================================================================
--- Python Learning: Run & Output
+-- Run & Output
 -- =============================================================================
--- The core learning loop: write code → run → see output → iterate
 
 local runner = require("config.runner")
 vim.keymap.set("n", "<leader>rr", runner.run, { silent = true, desc = "Run current file" })
@@ -13,19 +12,9 @@ vim.keymap.set("n", "<leader>rc", runner.run, { silent = true, desc = "Run (fres
 vim.keymap.set("n", "<leader>rq", runner.close, { silent = true, desc = "Close output panel" })
 
 -- =============================================================================
--- Learning Tutor: understand the selection or current file without editing it
--- =============================================================================
-
-local tutor = require("config.tutor")
-tutor.setup()
-vim.keymap.set("n", "<leader>ta", tutor.ask_file, { silent = true, desc = "Ask Tutor about file" })
-vim.keymap.set("x", "<leader>ta", tutor.ask_selection, { silent = true, desc = "Ask Tutor about selection" })
-vim.keymap.set("n", "<leader>tt", tutor.toggle, { silent = true, desc = "Toggle Tutor sidebar" })
-
--- =============================================================================
 -- General Terminal (replaces toggleterm with Snacks.terminal)
 -- =============================================================================
--- Ctrl+\ opens a floating terminal — works perfectly with zen-mode
+-- Ctrl+\ opens a floating terminal
 
 vim.keymap.set({ "n", "t", "i" }, [[<C-\>]], function()
   Snacks.terminal(nil, {
@@ -38,7 +27,7 @@ vim.keymap.set({ "n", "t", "i" }, [[<C-\>]], function()
 end, { noremap = true, silent = true, desc = "Toggle terminal" })
 
 -- =============================================================================
--- Python Learning: Interactive REPL
+-- Python REPL
 -- =============================================================================
 
 vim.keymap.set("n", "<leader>ri", function()
@@ -52,32 +41,8 @@ vim.keymap.set("n", "<leader>ri", function()
 end, { noremap = true, silent = true, desc = "Open Python REPL" })
 
 -- =============================================================================
--- Learning Mode Toggle (no zen-mode, just native options)
--- =============================================================================
-
-vim.keymap.set("n", "<leader>zl", function()
-  -- Toggle between focused (no chrome) and normal (full chrome) view
-  if vim.o.laststatus == 0 then
-    -- Restore normal view
-    vim.o.laststatus = 3
-    vim.o.showtabline = 2
-    vim.wo.signcolumn = "yes"
-    vim.notify("Normal mode", vim.log.levels.INFO)
-  else
-    -- Enter focused view
-    vim.o.laststatus = 0
-    vim.o.showtabline = 0
-    vim.wo.signcolumn = "no"
-    vim.notify("Focus mode", vim.log.levels.INFO)
-  end
-end, { noremap = true, silent = true, desc = "Toggle Focus Mode" })
-
--- =============================================================================
 -- Core Keymaps (preserved from original)
 -- =============================================================================
-
--- Claude Code integration is handled by claudecode.nvim plugin
--- Keymaps: <leader>ac (toggle), <leader>as (send selection), <leader>ab (add file)
 
 vim.api.nvim_set_keymap("n", "<leader>w", ":w<CR>", { noremap = true, silent = true })
 
@@ -121,10 +86,7 @@ vim.keymap.set("i", "<C-e>", "<End>", { desc = "Line end" })
 -- Disable macro recording (q key) - prevent accidental triggers
 vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording)" })
 
--- Claude Code: Send visual selection
-vim.keymap.set("v", "<leader>as", ":ClaudeCodeSend<CR>", { noremap = true, silent = true, desc = "Send to Claude" })
-
--- Pick and save colorscheme permanently (★ = follows macOS light/dark)
+-- Pick and save a colour theme (previews as you move through the list)
 vim.keymap.set("n", "<leader>uC", function()
   require("dojo.theme").pick()
 end, { desc = "Pick & save colorscheme" })

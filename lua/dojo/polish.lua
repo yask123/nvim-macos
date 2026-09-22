@@ -1,6 +1,7 @@
 -- Highlights that are always visible, whatever the colour theme. Some themes
 -- make the selection or "other uses of this word" almost the background
 -- colour; after every theme load, derive them from the theme's own accent.
+-- Also: file icons in one quiet tone, so colour is left for the code.
 
 local M = {}
 
@@ -43,6 +44,11 @@ function M.apply()
   hl(0, "IncSearch", { bg = blend(warm, bg, 0.60), fg = bg, bold = true })
   hl(0, "CurSearch", { bg = blend(warm, bg, 0.60), fg = bg, bold = true })
   hl(0, "MatchParen", { bg = blend(accent, bg, 0.25), bold = true })
+  -- File-type icons in one quiet tone instead of a rainbow (tree, tabs, pickers).
+  local icon = { fg = blend(fg, bg, 0.55) }
+  for _, color in ipairs({ "Azure", "Blue", "Cyan", "Green", "Grey", "Orange", "Purple", "Red", "Yellow" }) do
+    hl(0, "MiniIcons" .. color, icon)
+  end
 end
 
 function M.setup()

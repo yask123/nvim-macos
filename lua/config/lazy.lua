@@ -31,21 +31,13 @@ require("lazy").setup({
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
   install = {
-    colorscheme = {
-      "tokyonight",
-      "habamax",
-      -- newly added theme bundles
-      "catppuccin",
-      "kanagawa",
-      "rose-pine",
-      "github_light",
-      "dayfox",
-    },
+    colorscheme = { "rose-pine", "habamax" },
   },
   checker = {
     enabled = vim.env.NVIM_DOCTOR ~= "1", -- avoid update checks during doctor runs
     notify = false, -- notify on update
   }, -- automatically check for plugin updates
+  change_detection = { notify = false }, -- reload quietly when a settings file changes
   rocks = {
     -- No configured plugin needs LuaRocks; avoid a redundant hererocks install.
     enabled = false,
