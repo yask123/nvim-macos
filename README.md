@@ -131,6 +131,7 @@ Useful installer switches:
 ```bash
 ./install.sh --skip-brew      # Brewfile dependencies and fonts already exist
 ./install.sh --skip-plugins   # clone only; install plugins on first launch
+./install.sh --no-app         # terminal only: skip the Dojo app setup
 ```
 
 Re-running the installer is safe: the current Neovim directories are moved to

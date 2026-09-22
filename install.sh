@@ -6,12 +6,13 @@ repo_url="${NVIM_BOOTSTRAP_REPO:-https://github.com/yask123/nvim-macos.git}"
 repo_ref="${NVIM_BOOTSTRAP_REF:-main}"
 skip_brew=0
 skip_plugins=0
+with_app=1
 temporary_root=""
 user_home="${HOME:?HOME is not set}"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--skip-brew] [--skip-plugins]
+Usage: ./install.sh [--skip-brew] [--skip-plugins] [--no-app]
 
 Installs this Neovim setup on macOS. Existing Neovim config, data, state, and
 cache are moved to a timestamped backup before the clean clone is activated.
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-brew) skip_brew=1 ;;
     --skip-plugins) skip_plugins=1 ;;
+    --no-app) with_app=0 ;;
     -h | --help)
       usage
       exit 0
@@ -222,6 +224,12 @@ else
   "$target_config/scripts/doctor.sh"
 fi
 
-printf '\nNeovim is ready. Launch it with: nvim\n'
+if [[ $with_app -eq 1 && -d /Applications/Neovide.app ]]; then
+  printf '\nSetting up the Dojo app…\n'
+  "$target_config/scripts/setup-dojo.sh"
+  printf '\nDojo is ready. Open it from Spotlight ("Dojo") or run: dojo <folder>\n'
+else
+  printf '\nNeovim is ready. Launch it with: nvim\n'
+  printf 'For the Dojo app later, run: %s/scripts/setup-dojo.sh\n' "$target_config"
+fi
 printf 'Update this setup later with: nvim-update\n'
-printf 'For the Dojo app (Neovide launcher, Ghostty and zsh extras) run: %s/scripts/setup-dojo.sh\n' "$target_config"

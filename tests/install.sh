@@ -46,7 +46,7 @@ printf 'keep\n' >"$HOME/.vim/keep.txt"
 touch "$HOME/Library/Fonts/JetBrainsMono-Regular.ttf"
 touch "$HOME/Library/Fonts/0xProtoNerdFontMono-Regular.ttf"
 
-"$repo_root/install.sh" --skip-brew --skip-plugins
+"$repo_root/install.sh" --skip-brew --skip-plugins --no-app
 
 [[ -f "$XDG_CONFIG_HOME/nvim/init.lua" ]]
 [[ -x "$HOME/.local/bin/nvim-update" ]]
