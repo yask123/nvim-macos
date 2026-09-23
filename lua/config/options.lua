@@ -56,6 +56,13 @@ vim.opt.relativenumber = false
 -- Smooth scrolling (if supported)
 vim.opt.smoothscroll = true
 
+-- Like a modern editor: no swap files and no "swap file already exists"
+-- prompts. Auto-save writes your work to disk a second after you stop typing,
+-- and undo history survives restarts (LazyVim's undofile). Files changed
+-- outside Dojo reload on their own when you come back to the window.
+vim.opt.swapfile = false
+vim.opt.autoread = true
+
 -- Show matching brackets
 vim.opt.showmatch = true
 
