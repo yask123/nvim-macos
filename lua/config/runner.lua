@@ -36,15 +36,28 @@ local function source_window()
   end
 end
 
-local function set_title(text)
+local function set_title(text, running)
   if valid_win(panel.win) then
     local title = text:gsub("%%", "%%%%") -- a file name may contain %
-    vim.wo[panel.win].winbar = "%#Comment#  " .. title .. "%=q or ⌘J close  ·  ⌘R run again  "
+    local hint = running and "⌃C stop  ·  ⌘J close  " or "q or ⌘J close  ·  ⌘R run again  "
+    vim.wo[panel.win].winbar = "%#Comment#  " .. title .. "%=" .. hint
   end
 end
 
 function M.is_open()
   return valid_win(panel.win)
+end
+
+function M.is_running()
+  return panel.job ~= nil
+end
+
+--- Stop the running program (an infinite loop, a server) and keep its output.
+function M.stop()
+  if panel.job then
+    panel.stopped = true
+    pcall(vim.fn.jobstop, panel.job)
+  end
 end
 
 --- Close the panel (stopping the program if it's still running).
@@ -101,7 +114,11 @@ local function finished(job, code, name, source)
     return -- replaced by a newer run, or closed
   end
   panel.job = nil
-  set_title(code == 0 and (name .. " finished") or (name .. " exited with code " .. code))
+  if panel.stopped or code == 130 then -- 130: interrupted with ⌃C in the panel
+    set_title(name .. " stopped")
+  else
+    set_title(code == 0 and (name .. " finished") or (name .. " exited with code " .. code))
+  end
   -- Back to the code, unless you've already moved on yourself.
   if vim.api.nvim_get_current_win() == panel.win then
     vim.cmd.stopinsert()
@@ -109,7 +126,9 @@ local function finished(job, code, name, source)
       vim.api.nvim_set_current_win(source)
     end
   end
-  require("dojo.sfx").run_result(code)
+  if not panel.stopped then
+    require("dojo.sfx").run_result(code)
+  end
 end
 
 function M.run()
@@ -172,7 +191,8 @@ function M.run()
       end
     end, { buffer = panel.buf, silent = true, desc = "Close run output" })
   end
-  set_title("Running " .. name .. "…")
+  panel.stopped = false
+  set_title("Running " .. name .. "…", true)
   if #vim.api.nvim_list_uis() > 0 then
     vim.cmd.startinsert() -- keys go to the program, for input()
   end

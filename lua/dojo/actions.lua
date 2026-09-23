@@ -380,6 +380,14 @@ function M.run_file()
   require("config.runner").run()
 end
 
+-- ⌃C: stop the program ⌘R started (an infinite loop, say). Its output stays.
+function M.stop_run()
+  local runner = require("config.runner")
+  if runner.is_running() then
+    runner.stop()
+  end
+end
+
 function M.close_output()
   normal_mode()
   require("config.runner").close()

@@ -83,6 +83,7 @@ return {
       {
         title = "Run",
         items = {
+          { mac = "⌃C", keys = { "<C-c>" }, run = A.stop_run, desc = "Stop the running program", vim = "Ctrl-c" },
           { mac = "⌘⇧R", keys = { "<D-R>", "<D-S-r>" }, mode = NI, run = A.close_output, desc = "Close run output", vim = "Space r q" },
           { mac = "⌃\\", desc = "Floating terminal", vim = "Ctrl-\\" },
           { mac = "Esc Esc", desc = "Leave terminal typing mode", vim = "Ctrl-\\ Ctrl-n" },
