@@ -1,0 +1,4 @@
+{
+  "trailingSlash": false,
+  "redirects": [{ "source": "/", "destination": "/dojo", "permanent": false }]
+}
