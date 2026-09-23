@@ -56,7 +56,7 @@ if [[ -f "$updater" ]] && grep -q "restore-plugins.sh" "$updater"; then
 fi
 app="$user_home/Applications/Dojo.app"
 if [[ -d "$app" && -x /usr/libexec/PlistBuddy ]] &&
-  [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" == "dev.dojo.launcher" ]]; then
+  [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" == dev.dojo.* ]]; then
   rm -rf -- "$app"
   printf 'Removed %s\n' "$app"
 fi

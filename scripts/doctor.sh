@@ -118,8 +118,10 @@ if [[ -d /Applications/Neovide.app ]]; then
 else
   warn "Neovide is not installed (brew install --cask neovide-app)"
 fi
-if [[ -d "$user_home/Applications/Dojo.app" ]]; then
-  ok "Dojo.app launcher"
+if [[ -x "$user_home/Applications/Dojo.app/Contents/MacOS/Dojo" ]]; then
+  ok "Dojo.app"
+elif [[ -d "$user_home/Applications/Dojo.app" ]]; then
+  warn "Dojo.app is the old launcher; run scripts/make-app.sh for the full app"
 else
   warn "Dojo.app is missing; run scripts/setup-dojo.sh"
 fi

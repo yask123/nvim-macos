@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Build ~/Applications/Dojo.app: a tiny launcher for Spotlight, the Dock and
-# Finder. Clicking it runs `dojo`; dropping a folder or file on it opens that.
-# It carries the Dojo icon and quits right away (Neovide is the editor window).
+# Build ~/Applications/Dojo.app: Dojo as a Mac app of its own. It is a copy of
+# Neovide with Dojo's name, icon and identifier, so the menu bar says "Dojo"
+# (About Dojo, Quit Dojo), and so do ⌘Tab, the Dock and Activity Monitor.
+# Also links the `dojo` command. Safe to re-run (nvim-update does, so a newer
+# Neovide or a new icon is picked up).
 
 set -Eeuo pipefail
 
 config_dir="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 app_dir="${DOJO_APP_DIR:-$HOME/Applications}"
 app="$app_dir/Dojo.app"
-work="$(mktemp -d "${TMPDIR:-/tmp}/dojo-app.XXXXXX")"
-trap 'rm -rf -- "$work"' EXIT
+neovide_app="${DOJO_NEOVIDE_APP:-/Applications/Neovide.app}"
+bundle_id="dev.dojo.editor"
+plist="$app/Contents/Info.plist"
+pb=/usr/libexec/PlistBuddy
 
 mkdir -p "$HOME/.local/bin" "$app_dir"
 bin="$HOME/.local/bin/dojo"
@@ -18,52 +22,66 @@ if [[ -e "$bin" && ! -L "$bin" ]] || { [[ -L "$bin" ]] && [[ "$(realpath "$bin")
 else
   ln -sf "$config_dir/scripts/dojo" "$bin"
 fi
-if [[ -d "$app" ]] && [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" != "dev.dojo.launcher" ]]; then
-  printf 'Refusing to replace %s: it is a different app\n' "$app" >&2
+
+if [[ ! -x "$neovide_app/Contents/MacOS/neovide" ]]; then
+  printf 'Neovide is not installed at %s (brew install --cask neovide-app)\n' "$neovide_app" >&2
   exit 1
 fi
+if [[ -d "$app" ]]; then
+  case "$("$pb" -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null)" in
+    "$bundle_id" | dev.dojo.launcher) ;; # ours (dev.dojo.launcher: the old launcher)
+    *)
+      printf 'Refusing to replace %s: it is a different app\n' "$app" >&2
+      exit 1
+      ;;
+  esac
+fi
 
-cat >"$work/Dojo.applescript" <<'EOF'
-on run
-	do shell script "\"$HOME/.local/bin/dojo\" > /dev/null 2>&1 &"
-end run
+# Build next to the target, then swap it in.
+staging="$app_dir/.Dojo.app.building"
+rm -rf -- "$staging"
+ditto "$neovide_app" "$staging"
+mv "$staging/Contents/MacOS/neovide" "$staging/Contents/MacOS/Dojo"
 
-on open theItems
-	repeat with anItem in theItems
-		do shell script "\"$HOME/.local/bin/dojo\" " & quoted form of (POSIX path of anItem) & " > /dev/null 2>&1 &"
-	end repeat
-end open
-EOF
+sp="$staging/Contents/Info.plist"
+set_key() { # key type value
+  "$pb" -c "Set :$1 $3" "$sp" 2>/dev/null || "$pb" -c "Add :$1 $2 $3" "$sp"
+}
+set_key CFBundleExecutable string Dojo
+set_key CFBundleName string Dojo
+set_key CFBundleDisplayName string Dojo
+set_key CFBundleIdentifier string "$bundle_id"
+set_key NSHumanReadableCopyright string "Dojo, built on Neovide and Neovim"
 
-rm -rf -- "$app"
-osacompile -o "$app" "$work/Dojo.applescript"
-
-plist="$app/Contents/Info.plist"
 # The icon file is named after its content hash: launchers that cache icons by
 # name (Raycast, Alfred) then pick up a new icon as soon as it changes.
 icon_name="Dojo-$(shasum "$config_dir/extras/dojo/Dojo.icns" | cut -c1-8)"
-cp "$config_dir/extras/dojo/Dojo.icns" "$app/Contents/Resources/$icon_name.icns"
-rm -f "$app/Contents/Resources/droplet.icns"
-rm -f "$app/Contents/Resources/Assets.car"
-/usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile $icon_name" "$plist" 2>/dev/null ||
-  /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $icon_name" "$plist"
-/usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string dev.dojo.launcher" "$plist" 2>/dev/null ||
-  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.dojo.launcher" "$plist"
-/usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "$plist" 2>/dev/null ||
-  /usr/libexec/PlistBuddy -c "Set :LSUIElement true" "$plist"
-# Accept folders and any file dropped on the icon.
-/usr/libexec/PlistBuddy -c "Delete :CFBundleDocumentTypes" "$plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy \
-  -c "Add :CFBundleDocumentTypes array" \
-  -c "Add :CFBundleDocumentTypes:0 dict" \
-  -c "Add :CFBundleDocumentTypes:0:CFBundleTypeRole string Viewer" \
-  -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes array" \
-  -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string public.folder" \
-  -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:1 string public.item" \
-  "$plist"
+cp "$config_dir/extras/dojo/Dojo.icns" "$staging/Contents/Resources/$icon_name.icns"
+rm -f "$staging/Contents/Resources/Assets.car"
+"$pb" -c "Delete :CFBundleIconName" "$sp" 2>/dev/null || true
+set_key CFBundleIconFile string "$icon_name"
 
-codesign --force --deep --sign - "$app" >/dev/null 2>&1
+# Where nvim lives, so Neovide finds it even if a login shell can't.
+nvim_bin="$(command -v nvim || true)"
+for candidate in /opt/homebrew/bin/nvim /usr/local/bin/nvim; do
+  [[ -n "$nvim_bin" ]] && break
+  [[ -x "$candidate" ]] && nvim_bin="$candidate"
+done
+"$pb" -c "Delete :LSEnvironment" "$sp" 2>/dev/null || true
+if [[ -n "$nvim_bin" ]]; then
+  "$pb" -c "Add :LSEnvironment dict" -c "Add :LSEnvironment:NEOVIM_BIN string $nvim_bin" "$sp"
+fi
+
+# Folders can be dropped on the icon too (they open as the project).
+"$pb" -c "Add :CFBundleDocumentTypes:0 dict" \
+  -c "Add :CFBundleDocumentTypes:0:CFBundleTypeName string Folder" \
+  -c "Add :CFBundleDocumentTypes:0:CFBundleTypeRole string Editor" \
+  -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes array" \
+  -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string public.folder" "$sp"
+
+codesign --force --deep --sign - "$staging" >/dev/null 2>&1
+rm -rf -- "$app"
+mv "$staging" "$app"
 touch "$app"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$app" >/dev/null 2>&1 || true
 

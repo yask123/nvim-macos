@@ -131,7 +131,28 @@ function M.setup()
     -- Started inside a folder (`dojo ~/code/app`, or --chdir): open it as the
     -- project, restoring its last session. From $HOME you get the dashboard.
     local cwd = vim.fn.getcwd()
-    if vim.fn.argc() == 0 and cwd ~= vim.env.HOME and cwd ~= "/" then
+    -- A folder dropped on the Dojo icon (or given at startup) arrives as a
+    -- directory buffer: open it as the project instead.
+    vim.api.nvim_create_autocmd("BufEnter", {
+      group = group,
+      callback = function(ev)
+        local name = vim.api.nvim_buf_get_name(ev.buf)
+        if name == "" or vim.bo[ev.buf].buftype ~= "" or vim.fn.isdirectory(name) == 0 then
+          return
+        end
+        require("dojo.project").later(function()
+          pcall(vim.api.nvim_buf_delete, ev.buf, { force = true })
+          require("dojo.project").open(name)
+        end)
+      end,
+    })
+    -- Started with a folder (dropped on the icon while Dojo was closed).
+    local arg = vim.fn.argc() == 1 and vim.fn.fnamemodify(vim.fn.argv(0), ":p"):gsub("/$", "") or nil
+    if arg and vim.fn.isdirectory(arg) == 1 then
+      require("dojo.project").later(function()
+        require("dojo.project").open(arg)
+      end)
+    elseif vim.fn.argc() == 0 and cwd ~= vim.env.HOME and cwd ~= "/" then
       require("dojo.project").later(function()
         require("dojo.project").open(cwd)
       end)

@@ -12,7 +12,7 @@
 
 import AppKit
 
-let bundleID = "com.neovide.neovide"
+let bundleIDs = ["dev.dojo.editor", "com.neovide.neovide"]  // the Dojo app, or plain Neovide
 let args = CommandLine.arguments
 var opacity = CGFloat(args.count > 1 ? Double(args[1]) ?? 0.45 : 0.45)
 let lockPath = args.count > 2 ? args[2] : NSTemporaryDirectory() + "dojo-dim.lock"
@@ -34,7 +34,7 @@ final class Veil {
         center.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) {
             note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            if app?.bundleIdentifier == bundleID && neovide() == nil { exit(0) }
+            if bundleIDs.contains(app?.bundleIdentifier ?? "") && neovide() == nil { exit(0) }
         }
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
@@ -112,7 +112,7 @@ final class Veil {
 }
 
 func neovide() -> NSRunningApplication? {
-    NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first
+    bundleIDs.lazy.compactMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0).first }.first
 }
 
 // The frontmost ordinary window of that process (window lists are front to back).

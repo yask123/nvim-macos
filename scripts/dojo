@@ -13,8 +13,17 @@
 
 set -Eeuo pipefail
 
-neovide_app="${DOJO_NEOVIDE_APP:-/Applications/Neovide.app}"
-neovide_bin="$neovide_app/Contents/MacOS/neovide"
+# The Dojo app (a renamed Neovide, see make-app.sh), or plain Neovide.
+if [[ -n "${DOJO_NEOVIDE_APP:-}" ]]; then
+  neovide_app="$DOJO_NEOVIDE_APP"
+elif [[ -x "$HOME/Applications/Dojo.app/Contents/MacOS/Dojo" ]]; then
+  neovide_app="$HOME/Applications/Dojo.app"
+else
+  neovide_app="/Applications/Neovide.app"
+fi
+neovide_bin="$neovide_app/Contents/MacOS/Dojo"
+[[ -x "$neovide_bin" ]] || neovide_bin="$neovide_app/Contents/MacOS/neovide"
+process_name="$(basename -- "$neovide_bin")"
 settings="$HOME/Library/Application Support/neovide/neovide-settings.json"
 socket="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/dojo.sock"
 
@@ -67,7 +76,7 @@ if [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remo
 fi
 
 # 2. Neovide is running without Dojo's socket: give the folder its own window.
-if pgrep -xq neovide; then
+if pgrep -xq "$process_name"; then
   if [[ -z "$dir" ]]; then
     open -a "$neovide_app"
   else
