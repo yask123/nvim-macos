@@ -9,6 +9,15 @@ function M.setup()
   end
   local g = vim.g
 
+  -- Opened from the Dock, Neovim may start without Homebrew on its PATH (no
+  -- ~/.zprofile line on a fresh Mac): search, git, Python and Node would all
+  -- go missing. Put Homebrew's folders back if they aren't there.
+  for _, dir in ipairs({ "/usr/local/bin", "/opt/homebrew/sbin", "/opt/homebrew/bin" }) do
+    if vim.uv.fs_stat(dir) and not (":" .. vim.env.PATH .. ":"):find(":" .. dir .. ":", 1, true) then
+      vim.env.PATH = dir .. ":" .. vim.env.PATH
+    end
+  end
+
   -- Neovide animates scrolling itself; don't stack snacks.scroll on top.
   g.snacks_scroll = false
 

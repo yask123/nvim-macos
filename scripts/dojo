@@ -73,7 +73,7 @@ if pgrep -xq neovide; then
   else
     args=(--reuse-instance --new-window --chdir "$dir")
     [[ -n "$file" ]] && args+=("$file")
-    "$neovide_bin" "${args[@]}" >/dev/null 2>&1 &
+    NEOVIM_BIN="${nvim_bin:-nvim}" "$neovide_bin" "${args[@]}" >/dev/null 2>&1 &
     disown
   fi
   exit 0
@@ -110,4 +110,8 @@ printf '{"window":{"Windowed":{"position":{"x":%s,"y":%s},"pixel_size":{"width":
 launch_args=()
 [[ -n "$dir" ]] && launch_args+=(--chdir "$dir")
 [[ -n "$file" ]] && launch_args+=(-- "$file")
-open -a "$neovide_app" --args ${launch_args[@]+"${launch_args[@]}"}
+# NEOVIM_BIN: Neovide starts Neovim through a login shell, which may not have
+# Homebrew on its PATH (a fresh Mac without the ~/.zprofile line).
+env_args=()
+[[ -n "$nvim_bin" ]] && env_args=(--env "NEOVIM_BIN=$nvim_bin")
+open ${env_args[@]+"${env_args[@]}"} -a "$neovide_app" --args ${launch_args[@]+"${launch_args[@]}"}

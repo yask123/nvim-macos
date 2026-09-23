@@ -103,6 +103,15 @@ fi
 config_home="${XDG_CONFIG_HOME:-$user_home/.config}"
 config_dir="$config_home/nvim"
 
+# Neovide (the Dojo app) starts Neovim through a login shell.
+if [[ "$(uname -s)" == Darwin ]]; then
+  if env -i HOME="$user_home" /bin/zsh -lc 'command -v nvim' >/dev/null 2>&1; then
+    ok "login shell finds nvim (the Dojo app can start Neovim)"
+  else
+    warn "a login shell can't find nvim; add Homebrew to ~/.zprofile: echo 'eval \"\$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile"
+  fi
+fi
+
 # Dojo desktop pieces are optional: scripts/setup-dojo.sh installs them.
 if [[ -d /Applications/Neovide.app ]]; then
   ok "Neovide app"

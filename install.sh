@@ -79,6 +79,24 @@ if [[ $skip_brew -eq 0 ]] && ! command -v brew >/dev/null 2>&1; then
   load_brew
 fi
 
+# Login shells need Homebrew on PATH too: Neovide (the Dojo app) starts
+# Neovim through one, and it only reads ~/.zprofile. Homebrew's installer
+# only suggests this line, so add it (once) if it's missing.
+persist_brew_path() {
+  local brew_bin profile line
+  brew_bin="$(command -v brew || true)"
+  [[ -n "$brew_bin" ]] || return 0
+  line="eval \"\$($brew_bin shellenv)\""
+  for profile in "$user_home/.zprofile" "$user_home/.bash_profile"; do
+    [[ "$profile" == */.bash_profile && "${SHELL:-}" != */bash ]] && continue
+    if ! grep -qs "brew shellenv" "$profile"; then
+      printf '\n# Homebrew (added by the Dojo installer so apps can find its tools)\n%s\n' "$line" >>"$profile"
+      printf 'Added Homebrew to %s\n' "$profile"
+    fi
+  done
+}
+persist_brew_path
+
 if ! command -v git >/dev/null 2>&1; then
   printf 'Git is required. Install Apple Command Line Tools, then rerun this command.\n' >&2
   xcode-select --install >/dev/null 2>&1 || true
