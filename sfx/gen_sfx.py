@@ -195,91 +195,122 @@ def blip(f0, f1, dur, kind="tri", lp=4000):
     return mul(x, env_exp(L, a=0.002, tau=dur / 3))
 
 
-def thock(body_hz=180, body_tau=0.018, click_hz=(1800, 5200), click_gain=0.45, dur=0.06, seed=0, knock=0.0):
+def resonance(freq, tau, L, drop=0.0, drop_tau=0.004):
+    """A damped sine: how a keycap, plate or case rings when struck."""
+    tone = osc("sine", lambda t: freq * (1 + drop * math.exp(-t / drop_tau)), L)
+    return mul(tone, env_exp(L, a=0.0004, tau=tau))
+
+
+def room(x, taps=((0.007, 0.16), (0.013, 0.10), (0.021, 0.06), (0.034, 0.03))):
+    """A few soft early reflections: a small wooden desk, not a hall."""
+    wet = lowpass(x, 3200)
+    items = [(0.0, x, 1.0)] + [(d, wet, g) for d, g in taps]
+    return place(len(x) + n(0.04), items)
+
+
+def warm(x, drive=1.6):
+    """Gentle tape-style saturation: rounds the peaks, adds body."""
+    t = math.tanh(drive)
+    return [math.tanh(drive * v) / t for v in x]
+
+
+def keystroke(seed, body=110, tok=1350, weight=1.0, release=True, dur=0.13):
     """
-    Soft mechanical key 'thock':
-      - a very short band-passed noise transient (the keycap click)
-      - a low, fast-decaying sine body with a small downward pitch drop (the 'thock')
-      - optional 'knock' (second, lower resonance) for space/enter
+    A creamy mechanical key: three layers struck together, then released.
+      tok     the keycap: a short hollow plastic ring (two partials) plus a
+              whisper of band-passed noise for the contact
+      body    bottom-out: a low damped thud with a small pitch drop, and the
+              case answering an octave-and-a-bit above it
+      release the upstroke ~50 ms later: a quieter, higher tok
+    Then a little room and warmth. `weight` darkens and deepens (space, enter).
     """
+    r = random.Random(seed)
     L = n(dur)
-    tr = bandpass(noise(L, seed), click_hz[0], click_hz[1])
-    tr = mul(tr, env_exp(L, a=0.0003, tau=0.0025))
-    body = osc("sine", lambda t: body_hz * (1 + 0.35 * math.exp(-t / 0.004)), L)
-    body = mul(body, env_exp(L, a=0.0008, tau=body_tau))
-    tracks = [(tr, click_gain), (body, 1.0)]
-    if knock:
-        kb = osc("sine", lambda t: body_hz * 0.62, L)
-        tracks.append((mul(kb, env_exp(L, a=0.002, tau=body_tau * 1.6)), knock))
-    # gentle overall low-pass so it sits under the music, not on top of it
-    return lowpass(mix(*tracks), 6000)
+    tokf = tok * r.uniform(0.92, 1.08) / (0.85 + 0.15 * weight)
+    click = mul(bandpass(noise(L, seed), 900, 4200), env_exp(L, a=0.0002, tau=0.0014))
+    keycap = mix((resonance(tokf, 0.0055, L), 1.0), (resonance(tokf * 2.27, 0.0028, L), 0.35))
+    bodyf = body * r.uniform(0.94, 1.06)
+    thud = mix(
+        (resonance(bodyf, 0.018 * weight, L, drop=0.3), 1.0),
+        (resonance(bodyf * 2.6, 0.009, L), 0.28),
+    )
+    items = [(0.0, click, 0.2), (0.0, keycap, 0.55), (0.0015, thud, 0.8)]
+    if release:
+        up = mix((resonance(tokf * 1.12, 0.004, L), 1.0), (resonance(tokf * 2.5, 0.002, L), 0.3))
+        items.append((r.uniform(0.042, 0.062), up, 0.16))
+    x = place(L, items)
+    x = lowpass(x, 7000 / (0.8 + 0.2 * weight))
+    return room(warm(x))
+
+
+# Game cues: soft chiptune voices, all in D major pentatonic (D E F# A B) so
+# every sound agrees with every other one, and with the keys.
+def soft_pulse(freq, dur, duty=0.25, lp=2600, tau=None, vib=0.0, sub=0.35):
+    """A square wave with the fizz filtered off, a sine an octave down for
+    roundness, and a short echo: 8-bit in spirit, gentle on the ears."""
+    L = n(dur)
+    fn = (lambda t: freq * (1 + vib * math.sin(2 * math.pi * 5.5 * t))) if vib else (lambda t: freq)
+    x = lowpass(osc("square", fn, L, duty=duty), lp)
+    low = osc("sine", lambda t: freq / 2, L)
+    env = env_exp(L, a=0.003, tau=tau or dur / 2.5)
+    return mul(mix((x, 1.0), (low, sub)), env)
+
+
+def jingle(notes, echo=0.24):
+    """notes: (start, name, dur[, kind]) -> one phrase with a soft 95 ms echo."""
+    end = max(start + dur for start, _, dur, *_ in notes) + 0.3
+    items = []
+    for start, name, dur, *kind in notes:
+        f = note(name)
+        voice = soft_pulse(f, dur) if not kind else mul(osc("tri", lambda t: f, n(dur)), env_exp(n(dur), a=0.003, tau=dur / 2.5))
+        items.append((start, voice, 1.0))
+        items.append((start + 0.095, lowpass(voice, 1800), echo))
+    return place(n(end), items)
 
 
 # --------------------------------------------------------------------------- the pack
 print(f"writing to {OUT}")
 
-# typing ticks: 4 variants, the daemon adds +-0.5 semitone / +-2 dB jitter on top
-for i, (hz, seed) in enumerate([(175, 1), (190, 2), (168, 3), (182, 4)], start=1):
-    write(f"key_{i}", thock(body_hz=hz, seed=seed), -20)
-# space/enter: deeper, a touch longer, with a second resonance
-for i, (hz, seed) in enumerate([(128, 11), (136, 12)], start=1):
-    write(f"space_{i}", thock(body_hz=hz, body_tau=0.024, dur=0.075, seed=seed, knock=0.35, click_gain=0.35), -19)
-write("enter", thock(body_hz=118, body_tau=0.03, dur=0.09, seed=21, knock=0.5, click_gain=0.3), -17)
-# backspace: lighter, higher, less body
-write("backspace", thock(body_hz=240, body_tau=0.012, dur=0.045, seed=31, click_gain=0.6), -22)
+# typing: 8 variations (the daemon adds a little pitch/level/pan jitter too)
+# (Tuned for laptop speakers too: the "thock" lives around 250-450 Hz, the
+# keycap around 2 kHz; nothing relies on bass a MacBook can't play.)
+for i in range(1, 9):
+    r = random.Random(100 + i)
+    write(f"key_{i}", keystroke(100 + i, body=r.uniform(300, 350), tok=r.uniform(1900, 2300)), -21)
+# space: deeper and rounder, the long bar settling
+for i in range(1, 4):
+    write(f"space_{i}", keystroke(200 + i, body=220, tok=1500, weight=1.4, dur=0.16), -20)
+# enter: the most satisfying one
+write("enter", keystroke(301, body=200, tok=1350, weight=1.6, dur=0.18), -19)
+# backspace: lighter and a little higher, like a small key
+write("backspace", keystroke(401, body=380, tok=2600, weight=0.8, release=False, dur=0.1), -23)
 
-# The "refined" cues: soft bell tones (sine fundamental + gentle, slightly
-# inharmonic partials), quick attack, natural decay. Quiet by design.
-def bell(freq, dur, tau=None):
-    L = n(dur)
-    tau = tau or dur / 3.5
-    parts = [(1.0, 1.0), (2.0, 0.22), (3.01, 0.06), (4.2, 0.025)]
-    x = [0.0] * L
-    for ratio, amp in parts:
-        tone = osc("sine", lambda t, r=ratio: freq * r, L)
-        env = env_exp(L, a=0.003, tau=tau / ratio ** 0.5)
-        for i in range(L):
-            x[i] += amp * tone[i] * env[i]
-    return x
+# save: a coin-style pickup, a fourth up (A5 -> D6) with a gentle shimmer
+write("save", place(n(0.55), [
+    (0.0, soft_pulse(note("A5"), 0.06, tau=0.05), 0.8),
+    (0.055, soft_pulse(note("D6"), 0.34, tau=0.14, vib=0.006), 1.0),
+    (0.15, lowpass(soft_pulse(note("D6"), 0.34, tau=0.14), 1800), 0.22),
+]), -21)
 
+# run finished: a quick "stage clear" arpeggio up to the octave
+write("run_ok", jingle([(0.0, "D5", 0.07), (0.06, "F#5", 0.07), (0.12, "A5", 0.07), (0.18, "D6", 0.34)]), -20)
 
-# save: one soft bell (A5), like a quiet confirmation
-write("save", bell(note("A5"), 0.42), -24)
+# run failed: a soft two-note "bonk" down, triangle, no alarm
+write("run_err", jingle([(0.0, "A4", 0.1, "tri"), (0.1, "E4", 0.26, "tri")], echo=0.12), -21)
 
-# run succeeded: two bells rising a fifth (E5 -> B5)
-write("run_ok", place(n(0.62), [(0.0, bell(note("E5"), 0.36), 0.9), (0.11, bell(note("B5"), 0.5), 1.0)]), -21)
+# opening a project: a short power-up
+write("start", jingle([(0.0, "D5", 0.06), (0.05, "A5", 0.06), (0.1, "D6", 0.06), (0.15, "F#6", 0.06), (0.2, "A6", 0.3)]), -20)
 
-# run failed: a single low, muted bell (A3), no alarm
-write("run_err", lowpass(bell(note("A3"), 0.45, tau=0.09), 1400), -22)
+# yank (copy): a tiny sparkle
+write("yank", jingle([(0.0, "B6", 0.05, "tri"), (0.045, "F#7", 0.12, "tri")], echo=0.15), -24)
 
-# mode changes: soft triangle blips, up for insert, down for normal
-write("mode_insert", blip(note("E5"), note("B5"), 0.07), -21)
-write("mode_normal", blip(note("B5"), note("E5"), 0.07), -22)
-write("mode_visual", blip(note("G5"), note("D6"), 0.06), -22)
-
-# yank = sparkle pickup (two quick high tri notes), paste = soft 'plop'
-write("yank", seq([chip_note(note("A6"), 0.04, kind="tri", d=0.03, s=0.5, r=0.01),
-                   chip_note(note("E7"), 0.11, kind="tri", d=0.09, s=0.0, r=0.04)]), -19)
-write("paste", blip(note("A5"), note("D5"), 0.08, kind="sine"), -18)
-
-# undo = quick 'rewind' down-sweep, redo = up-sweep
-write("undo", blip(1400, 520, 0.09, kind="square", lp=2200), -21)
-write("redo", blip(520, 1400, 0.09, kind="square", lp=2200), -21)
-
-# open project = start jingle (~0.9 s): pulse lead + triangle bass
-lead_notes = [("G5", 0.09), ("C6", 0.09), ("E6", 0.09), ("G6", 0.12), ("E6", 0.09), ("G6", 0.36)]
-t, items = 0.0, []
-for nn, d in lead_notes:
-    items.append((t, chip_note(note(nn), d + 0.02, duty=0.25, lp=3800, d=0.06, s=0.45, r=0.03, vib=0.004 if d > 0.3 else 0), 0.8))
-    t += d
-for start, nn, d in [(0.0, "C3", 0.36), (0.36, "G3", 0.20), (0.56, "C4", 0.40)]:
-    items.append((start, chip_note(note(nn), d, kind="tri", d=0.15, s=0.5, r=0.06), 0.9))
-write("start", place(n(t + 0.1), items), -12)
-
-# quit = power-down (reverse-ish of start, short)
-write("quit", seq([chip_note(note(x), 0.07, kind="tri", d=0.05, s=0.4, r=0.01) for x in ["G5", "E5", "C5"]] +
-                  [chip_note(note("G4"), 0.18, kind="tri", d=0.15, s=0.0, r=0.06)]), -15)
-
-# notification / diagnostic error: two-tone soft chime
-write("notify", bell(note("E6"), 0.3), -26)
+# (off by default, kept so the pack is complete)
+write("paste", blip(note("A5"), note("D5"), 0.08, kind="sine"), -20)
+write("undo", blip(1200, 600, 0.08, kind="tri"), -23)
+write("redo", blip(600, 1200, 0.08, kind="tri"), -23)
+write("mode_insert", blip(note("D5"), note("A5"), 0.06), -23)
+write("mode_normal", blip(note("A5"), note("D5"), 0.06), -24)
+write("mode_visual", blip(note("F#5"), note("B5"), 0.05), -24)
+write("quit", jingle([(0.0, "A5", 0.07, "tri"), (0.07, "F#5", 0.07, "tri"), (0.14, "D5", 0.25, "tri")], echo=0.12), -22)
+write("notify", jingle([(0.0, "E6", 0.2, "tri")], echo=0.1), -26)
 print("done")

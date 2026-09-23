@@ -112,9 +112,10 @@ return {
     cond = function()
       return #vim.api.nvim_list_uis() > 0
     end,
-    -- Subtle by default: a soft keyboard "thock" while typing and a quiet
-    -- bell on save and run. The retro cues (mode blips, yank/undo, start
-    -- jingle) still exist in the pack; enable them here if you want them.
+    -- Soft mechanical typing, plus small game-style cues that share one key
+    -- (D major pentatonic): a coin on save (⌘S / :w, never auto-save), a
+    -- "stage clear" when a run succeeds, a gentle bonk when it fails, a
+    -- power-up when you open a project, a sparkle on copy.
     opts = {
       volume = 0.3,
       idle_suspend = 20,
@@ -125,11 +126,11 @@ return {
         backspace = true,
         save = true,
         run = true,
+        start = true,
+        yank = true,
         mode = false,
         visual = false,
-        start = false,
         quit = false,
-        yank = false,
         paste = false,
         undo = false,
       },
