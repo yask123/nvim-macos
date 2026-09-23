@@ -243,6 +243,84 @@ def keystroke(seed, body=110, tok=1350, weight=1.0, release=True, dur=0.13):
     return room(warm(x))
 
 
+def metal(freq, tau, L, partials=((1.0, 1.0), (1.52, 0.5), (2.37, 0.3), (3.11, 0.15))):
+    """A short, inharmonic ring: a small steel part being struck."""
+    x = [0.0] * L
+    for ratio, amp in partials:
+        ring = resonance(freq * ratio, tau / ratio ** 0.7, L)
+        for i in range(L):
+            x[i] += amp * ring[i]
+    return x
+
+
+def typekey(seed, strike=1.0, dur=0.16):
+    """
+    A gentle typewriter key, as if on a well-oiled machine with a sheet of
+    paper and a soft roller:
+      lever   a small, dry tick as the key goes down
+      typebar ~12 ms later, the letter lands: a paper-damped slap (noise
+              through a mid band), a rounded platen thump, a faint steel ring
+    """
+    r = random.Random(seed)
+    L = n(dur)
+    lever = mix((resonance(r.uniform(2600, 3200), 0.0018, L), 1.0),
+                (bandpass(noise(L, seed), 2000, 6000), 0.0))
+    lever = mul(lever, env_exp(L, a=0.0002, tau=0.002))
+    slap = mul(bandpass(noise(L, seed + 1), 900, 4200), env_exp(L, a=0.0003, tau=0.004))
+    platen = resonance(r.uniform(250, 300), 0.006, L, drop=0.25)
+    ring = metal(r.uniform(2900, 3500), 0.02, L)
+    hit = r.uniform(0.010, 0.015)
+    x = place(L, [
+        (0.0, lever, 0.18),
+        (hit, slap, 1.0 * strike),
+        (hit, platen, 0.3 * strike),
+        (hit + 0.0005, ring, 0.05 * strike),
+    ])
+    return room(warm(lowpass(x, 6500), drive=1.3))
+
+
+def ratchet(start, count, step, seed, gain=1.0, freq=3000):
+    """A run of small escapement ticks (the carriage moving)."""
+    r = random.Random(seed)
+    items = []
+    for k in range(count):
+        L = n(0.012)
+        tick = mix((resonance(freq * r.uniform(0.93, 1.07), 0.0012, L), 1.0))
+        items.append((start + k * step * r.uniform(0.9, 1.1), tick, gain * r.uniform(0.7, 1.0)))
+    return items
+
+
+def carriage_step(seed, dur=0.16):
+    """Space: the carriage steps along - a soft wooden chunk and one tick."""
+    r = random.Random(seed)
+    L = n(dur)
+    lever = mul(resonance(r.uniform(2200, 2600), 0.002, L), env_exp(L, a=0.0002, tau=0.002))
+    chunk = resonance(r.uniform(230, 260), 0.008, L, drop=0.2)
+    thud = mul(bandpass(noise(L, seed), 400, 2000), env_exp(L, a=0.0005, tau=0.005))
+    items = [(0.0, lever, 0.16), (0.011, chunk, 0.4), (0.011, thud, 0.7)] + ratchet(0.03, 1, 0.0, seed, 0.12)
+    return room(warm(lowpass(place(L, items), 5500), drive=1.3))
+
+
+def carriage_return(seed=77):
+    """Enter: a quick ratchet sweep, the carriage settling, a small quiet bell."""
+    L = n(0.7)
+    items = ratchet(0.0, 9, 0.016, seed, 0.14, freq=2700)
+    settle = resonance(225, 0.02, n(0.2), drop=0.2)
+    items.append((0.16, settle, 0.9))
+    items.append((0.16, mul(bandpass(noise(n(0.2), seed), 250, 1400), env_exp(n(0.2), a=0.0005, tau=0.008)), 0.3))
+    ding = metal(note("A6"), 0.35, n(0.6), partials=((1.0, 1.0), (2.76, 0.18), (5.4, 0.05)))
+    items.append((0.2, ding, 0.2))
+    return room(warm(lowpass(place(L, items), 6500), drive=1.2))
+
+
+def reverse_tick(seed=91):
+    """Backspace: the carriage nudged back - a light double tick."""
+    L = n(0.12)
+    items = ratchet(0.0, 2, 0.022, seed, 0.5, freq=2400)
+    items.append((0.004, resonance(210, 0.008, L), 0.35))
+    return room(lowpass(place(L, items), 6000))
+
+
 # Game cues: soft chiptune voices, all in D major pentatonic (D E F# A B) so
 # every sound agrees with every other one, and with the keys.
 def soft_pulse(freq, dur, duty=0.25, lp=2600, tau=None, vib=0.0, sub=0.35):
@@ -271,19 +349,14 @@ def jingle(notes, echo=0.24):
 # --------------------------------------------------------------------------- the pack
 print(f"writing to {OUT}")
 
-# typing: 8 variations (the daemon adds a little pitch/level/pan jitter too)
-# (Tuned for laptop speakers too: the "thock" lives around 250-450 Hz, the
-# keycap around 2 kHz; nothing relies on bass a MacBook can't play.)
+# typing: a gentle typewriter. 8 keys (the daemon adds a little pitch,
+# level and pan variation on top), the carriage for space and enter.
 for i in range(1, 9):
-    r = random.Random(100 + i)
-    write(f"key_{i}", keystroke(100 + i, body=r.uniform(300, 350), tok=r.uniform(1900, 2300)), -21)
-# space: deeper and rounder, the long bar settling
+    write(f"key_{i}", typekey(500 + i, strike=random.Random(i).uniform(0.85, 1.0)), -22)
 for i in range(1, 4):
-    write(f"space_{i}", keystroke(200 + i, body=220, tok=1500, weight=1.4, dur=0.16), -20)
-# enter: the most satisfying one
-write("enter", keystroke(301, body=200, tok=1350, weight=1.6, dur=0.18), -19)
-# backspace: lighter and a little higher, like a small key
-write("backspace", keystroke(401, body=380, tok=2600, weight=0.8, release=False, dur=0.1), -23)
+    write(f"space_{i}", carriage_step(600 + i), -23)
+write("enter", carriage_return(), -21)
+write("backspace", reverse_tick(), -25)
 
 # save: a coin-style pickup, a fourth up (A5 -> D6) with a gentle shimmer
 write("save", place(n(0.55), [
