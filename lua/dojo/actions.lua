@@ -107,7 +107,9 @@ function M.save()
     return
   end
   if vim.api.nvim_buf_get_name(0) ~= "" then
-    vim.cmd("silent! update")
+    -- Always write, even if auto-save got there first: ⌘S should visibly do
+    -- something (it formats the file and plays the save sound).
+    vim.cmd("silent! write")
     return
   end
   vim.ui.input({ prompt = "Save as: ", default = vim.fn.getcwd() .. "/", completion = "file" }, function(path)
