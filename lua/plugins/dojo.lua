@@ -68,7 +68,10 @@ return {
         menu = { scrollbar = false },
         documentation = { auto_show = true, auto_show_delay_ms = 200 },
       },
-      signature = { enabled = true },
+      -- Signature help only when asked (Ctrl-K in insert mode): for built-ins
+      -- it shows raw type-stub overloads (map's _T1@__new__ ...), not help.
+      -- ⌘K ⌘I on a name shows its real documentation.
+      signature = { enabled = true, trigger = { enabled = false } },
     },
   },
   -- Suggestions from the language server, file paths and words in the file.

@@ -260,8 +260,46 @@ function M.implementation()
   Snacks.picker.lsp_implementations()
 end
 
+-- Docs for the name under the cursor, written for people: the description
+-- first, then one simple way to call it. Language servers often lead with
+-- every type-stub overload (map() has six, full of `_T1@__new__`).
+function M.readable_docs(markdown)
+  local code, doc = markdown:match("^%s*```%w*\n(.-)\n```%s*\n%-%-%-+%s*\n(.*)$")
+  if not code then
+    return markdown -- nothing to rearrange
+  end
+  local forms = vim.split(vim.trim(code), "\n%s*\n")
+  local first = forms[1]:gsub("@[%w_]+", "") -- _T1@__new__ -> _T1
+  local lines = { vim.trim(doc), "", "```python", first, "```" }
+  if #forms > 1 then
+    table.insert(lines, ("_+%d more way%s to call it_"):format(#forms - 1, #forms > 2 and "s" or ""))
+  end
+  return table.concat(lines, "\n")
+end
+
 function M.hover()
-  vim.lsp.buf.hover()
+  local params = vim.lsp.util.make_position_params(0, "utf-16")
+  vim.lsp.buf_request_all(0, "textDocument/hover", params, function(results)
+    local parts = {}
+    for _, res in pairs(results) do
+      local contents = res.result and res.result.contents
+      if contents then
+        local text = type(contents) == "table" and (contents.value or contents[1] and contents[1].value) or contents
+        if type(text) == "string" and vim.trim(text) ~= "" then
+          table.insert(parts, M.readable_docs(text))
+        end
+      end
+    end
+    if #parts == 0 then
+      vim.notify("No documentation here", vim.log.levels.INFO, { title = "Docs" })
+      return
+    end
+    vim.lsp.util.open_floating_preview(vim.split(table.concat(parts, "\n\n---\n\n"), "\n"), "markdown", {
+      focus_id = "dojo_docs",
+      max_width = math.min(90, math.floor(vim.o.columns * 0.6)),
+      max_height = math.floor(vim.o.lines * 0.5),
+    })
+  end)
 end
 
 function M.code_action()
