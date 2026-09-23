@@ -23,6 +23,13 @@ function M.setup()
 
   -- Follow macOS light/dark for the window chrome; 'background' follows it automatically.
   g.neovide_theme = "auto"
+  -- Phosphor is dark-only: keep the window chrome dark with it.
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("DojoChrome", { clear = true }),
+    callback = function()
+      g.neovide_theme = vim.g.colors_name == "phosphor" and "dark" or "auto"
+    end,
+  })
   g.neovide_opacity = 1.0
   g.neovide_hide_mouse_when_typing = true
   g.neovide_input_macos_option_key_is_meta = "only_left" -- ⌥ works as Alt (move line ⌥↑/⌥↓)
@@ -43,7 +50,14 @@ function M.setup()
   g.neovide_cursor_trail_size = 0.0
   g.neovide_cursor_animate_in_insert_mode = false
   g.neovide_cursor_animate_command_line = false
-  g.neovide_cursor_smooth_blink = false -- smooth blink forces constant redraws
+  -- A slow, smooth "breathing" blink: the cursor fades rather than flashes.
+  g.neovide_cursor_smooth_blink = true
+  vim.opt.guicursor = {
+    "n-v-c-sm:block-Cursor",
+    "i-ci-ve:ver25-Cursor",
+    "r-cr-o:hor20-Cursor",
+    "a:blinkwait900-blinkon700-blinkoff500",
+  }
   g.neovide_cursor_antialiasing = true
 
   g.neovide_cursor_vfx_mode = "" -- no particles

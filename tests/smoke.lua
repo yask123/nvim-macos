@@ -8,8 +8,8 @@ end
 local version = vim.version()
 local version_supported = version.major > 0 or version.minor > 11 or (version.minor == 11 and version.patch >= 2)
 assert(version_supported, "Neovim 0.11.2+ is required")
-assert(vim.g.colors_name:match("^rose%-pine"), "default colorscheme: got " .. tostring(vim.g.colors_name))
-assert_equal(require("config.theme").default, "rose-pine", "theme follows macOS light/dark")
+assert_equal(vim.g.colors_name, "phosphor", "default colorscheme")
+assert_equal(require("config.theme").default, "phosphor", "Dojo's own theme is the default")
 
 local runner = require("config.runner")
 local path = "/tmp/a folder/hello world;touch should-not-run.py"

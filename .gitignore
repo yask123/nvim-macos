@@ -7,3 +7,4 @@
 doc/tags
 sfx/sounds/
 sfx/nvsfx
+__pycache__/

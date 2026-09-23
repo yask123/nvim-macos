@@ -27,6 +27,14 @@ function M.apply()
   if not bg or not fg then
     return -- transparent theme: leave it alone
   end
+  -- File-type icons in one quiet tone instead of a rainbow (tree, tabs, pickers).
+  local icon = { fg = blend(fg, bg, 0.55) }
+  for _, color in ipairs({ "Azure", "Blue", "Cyan", "Green", "Grey", "Orange", "Purple", "Red", "Yellow" }) do
+    vim.api.nvim_set_hl(0, "MiniIcons" .. color, icon)
+  end
+  if vim.g.colors_name == "phosphor" then
+    return -- Dojo's own theme sets the rest by hand
+  end
   local accent = get("Function", "fg") or get("Special", "fg") or fg
   local warm = get("DiagnosticWarn", "fg") or get("String", "fg") or fg
 
@@ -44,11 +52,6 @@ function M.apply()
   hl(0, "IncSearch", { bg = blend(warm, bg, 0.60), fg = bg, bold = true })
   hl(0, "CurSearch", { bg = blend(warm, bg, 0.60), fg = bg, bold = true })
   hl(0, "MatchParen", { bg = blend(accent, bg, 0.25), bold = true })
-  -- File-type icons in one quiet tone instead of a rainbow (tree, tabs, pickers).
-  local icon = { fg = blend(fg, bg, 0.55) }
-  for _, color in ipairs({ "Azure", "Blue", "Cyan", "Green", "Grey", "Orange", "Purple", "Red", "Yellow" }) do
-    hl(0, "MiniIcons" .. color, icon)
-  end
 end
 
 function M.setup()

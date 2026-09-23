@@ -1,6 +1,6 @@
 local M = {}
 
-M.default = "rose-pine" -- follows macOS light/dark
+M.default = "phosphor" -- Dojo's own dark theme; ⌘K ⌘T for light & dark ones
 M.path = vim.fn.stdpath("state") .. "/colorscheme"
 
 function M.get()

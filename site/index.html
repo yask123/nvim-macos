@@ -2,144 +2,503 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dojo — a quiet code editor for macOS</title>
-<meta name="description" content="Neovim as a quiet desktop editor. Opens like Sublime Text, speaks Cmd, and keeps the screen calm.">
-<meta property="og:title" content="Dojo — a quiet code editor for macOS">
-<meta property="og:description" content="Neovim as a quiet desktop editor. Opens like Sublime Text, speaks Cmd, and keeps the screen calm.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dojo — the quiet editor for macOS</title>
+<meta name="description" content="Neovim, dressed for the Mac. The Cmd shortcuts you know, a calm neon-on-black screen, and nothing you didn't ask for.">
+<meta name="theme-color" content="#07090a">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="Dojo — the quiet editor for macOS">
+<meta property="og:description" content="Neovim, dressed for the Mac. The Cmd shortcuts you know, a calm neon-on-black screen, and nothing you didn't ask for.">
 <meta property="og:image" content="screenshot.png">
 <link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #232136; --surface: #2a273f; --text: #e0def4; --muted: #908caa;
-    --faint: #6e6a86; --accent: #c4a7e7; --rose: #ea9a97; --line: #393552;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #faf4ed; --surface: #f2e9e1; --text: #464261; --muted: #797593;
-      --faint: #9893a5; --accent: #907aa9; --rose: #a95956; --line: #dfdad9;
-    }
+    --bg: #07090a;
+    --panel: #0c110f;
+    --panel-2: #101714;
+    --line: rgba(150, 255, 200, 0.08);
+    --line-2: rgba(150, 255, 200, 0.14);
+    --text: #e8f4ec;
+    --muted: #93a99d;
+    --faint: #6f867a;
+    --neon: #5ef2a0;
+    --neon-2: #8af7bb;
+    --glow: rgba(94, 242, 160, 0.16);
+    /* the editor's own palette (Phosphor) */
+    --c-kw: #5ef2a0; --c-fn: #86e3cf; --c-ty: #7cc9e6; --c-str: #c5e59a;
+    --c-num: #eec27d; --c-com: #67806f; --c-dim: #8aa497; --c-fg: #d3e6da;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --ease: cubic-bezier(.2, .7, .2, 1);
   }
   * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; scroll-behavior: smooth; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.6 Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    font: 16px/1.55 var(--sans); letter-spacing: -0.005em; overflow-x: hidden;
   }
-  main { max-width: 760px; margin: 0 auto; padding: 96px 24px 64px; }
-  header { text-align: center; }
-  .icon { width: 88px; height: 88px; }
-  h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; margin: 20px 0 8px; }
-  .lede { color: var(--muted); font-size: 18px; margin: 0 auto; max-width: 30em; }
-  .install { margin: 44px 0 14px; }
-  .label { color: var(--faint); font-size: 13px; margin: 18px 0 8px 4px; }
-  .label:first-child { margin-top: 0; }
-  .cmd {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px 14px 14px 18px;
-  }
-  .cmd code {
-    flex: 1; overflow-x: auto; white-space: nowrap;
-    font: 13.5px/1.5 "JetBrains Mono", ui-monospace, monospace; color: var(--text);
-  }
-  .cmd code::before { content: "$ "; color: var(--faint); }
-  .cmd code { scrollbar-width: none; mask-image: linear-gradient(to right, #000 88%, transparent); }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: rgba(94, 242, 160, 0.28); color: #fff; }
+
+  /* Atmosphere: a green glow from above and a faint dot grid that fades out */
+  .sky { position: absolute; inset: 0 0 auto 0; height: 1100px; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(60% 45% at 50% 0%, rgba(94, 242, 160, 0.13), transparent 70%),
+      radial-gradient(30% 25% at 50% 8%, rgba(134, 227, 207, 0.10), transparent 70%); }
+  .sky::after { content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(150, 255, 200, 0.10) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(70% 55% at 50% 10%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(70% 55% at 50% 10%, #000 30%, transparent 75%); }
+
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(160%) blur(18px);
+    -webkit-backdrop-filter: saturate(160%) blur(18px);
+    background: rgba(7, 9, 10, 0.62); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.02em; }
+  .brand img { width: 26px; height: 26px; }
+  nav .links { display: flex; gap: 24px; margin-left: auto; font-size: 14px; color: var(--muted); }
+  nav .links a:hover { color: var(--text); }
+  .pill { font: 500 13px var(--sans); color: var(--bg); background: var(--neon); padding: 7px 14px;
+    border-radius: 999px; box-shadow: 0 0 0 1px rgba(94,242,160,.4), 0 6px 24px -6px rgba(94,242,160,.6);
+    transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+  .pill:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(94,242,160,.5), 0 10px 30px -6px rgba(94,242,160,.7); }
+
+  /* Hero */
+  .hero { text-align: center; padding: 96px 0 40px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 12.5px var(--mono);
+    color: var(--muted); padding: 6px 12px 6px 10px; border: 1px solid var(--line-2); border-radius: 999px;
+    background: rgba(12, 17, 15, 0.6); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 10px var(--neon);
+    animation: breathe 2.6s ease-in-out infinite; }
+  h1 { font-size: clamp(48px, 8.5vw, 96px); line-height: 0.98; letter-spacing: -0.05em; font-weight: 600;
+    margin: 26px 0 20px;
+    background: linear-gradient(180deg, #f4fbf6 20%, #9fb9ab 110%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h1 em { font-style: normal; color: var(--neon); -webkit-text-fill-color: var(--neon);
+    text-shadow: 0 0 40px rgba(94, 242, 160, 0.45); }
+  .lede { max-width: 34em; margin: 0 auto; font-size: clamp(17px, 2vw, 20px); color: var(--muted); letter-spacing: -0.01em; }
+
+  /* Install */
+  .install { max-width: 620px; margin: 38px auto 0; }
+  .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--panel);
+    border: 1px solid var(--line); margin-bottom: 12px; }
+  .seg button { font: 500 13px var(--sans); color: var(--muted); background: transparent; border: 0;
+    padding: 6px 14px; border-radius: 7px; cursor: pointer; transition: color .2s, background .2s; }
+  .seg button[aria-selected="true"] { color: var(--text); background: var(--panel-2);
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 1px 2px rgba(0,0,0,.5); }
+  .cmd { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px; border-radius: 14px;
+    background: linear-gradient(180deg, rgba(16, 23, 20, 0.9), rgba(10, 14, 12, 0.9));
+    border: 1px solid var(--line-2);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 20px 50px -20px rgba(94,242,160,.25); text-align: left; }
+  .cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 14px/1.5 var(--mono);
+    color: var(--text); scrollbar-width: none; }
   .cmd code::-webkit-scrollbar { display: none; }
-  button {
-    font: 500 13px Inter, sans-serif; color: var(--bg); background: var(--accent);
-    border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; flex: none;
+  .cmd code .p { color: var(--neon); margin-right: 10px; user-select: none; }
+  .copy { flex: none; font: 500 13px var(--sans); color: var(--text); background: rgba(255,255,255,.06);
+    border: 1px solid var(--line-2); padding: 8px 14px; border-radius: 9px; cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s; }
+  .copy:hover { background: rgba(94,242,160,.12); border-color: rgba(94,242,160,.35); }
+  .copy.done { color: var(--bg); background: var(--neon); border-color: var(--neon); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--neon); outline-offset: 3px; border-radius: 8px; }
+  .note { font-size: 13.5px; color: var(--faint); margin: 14px 0 0; }
+  .note b { color: var(--muted); font-weight: 500; }
+
+  /* The live editor */
+  .stage { position: relative; margin: 72px auto 0; max-width: 1040px; }
+  .stage::before { content: ""; position: absolute; inset: 8% 6% -4%; z-index: -1;
+    background: radial-gradient(50% 60% at 50% 45%, rgba(94,242,160,.22), transparent 70%); filter: blur(30px); }
+  .win { border-radius: 14px; overflow: hidden; background: #0b0f0d;
+    border: 1px solid rgba(150,255,200,.10);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 50px 120px -30px rgba(0,0,0,.9), 0 30px 80px -40px rgba(94,242,160,.35); }
+  .bar { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 14px; position: relative; }
+  .bar i { width: 12px; height: 12px; border-radius: 50%; background: #2a332f; }
+  .bar i:nth-child(1) { background: #ff5f57; } .bar i:nth-child(2) { background: #febc2e; } .bar i:nth-child(3) { background: #28c840; }
+  .bar span { position: absolute; left: 0; right: 0; text-align: center; font: 12px var(--sans); color: var(--faint); pointer-events: none; }
+  .ed { display: grid; grid-template-columns: 220px 1fr; min-height: 0; font: 13.5px/1.75 var(--mono); }
+  .tree { background: #080b0a; padding: 10px 0 0 16px; color: var(--c-dim); border-right: 1px solid rgba(150,255,200,.05); }
+  .tree div { white-space: nowrap; }
+  .tree .f { color: var(--c-fg); }
+  .tree .on { color: var(--c-fg); background: #141c18; margin-left: -16px; padding-left: 16px; }
+  .tree .ic { color: #5d7267; display: inline-block; width: 1.4em; }
+  .code { padding: 10px 0 0; position: relative; }
+  .ln { display: grid; grid-template-columns: 56px 1fr; white-space: pre; }
+  .ln b { font-weight: 400; color: #3b4d43; text-align: right; padding-right: 22px; }
+  .ln.cur { background: #141c18; } .ln.cur b { color: var(--neon); }
+  .k { color: var(--c-kw); } .fn { color: var(--c-fn); } .ty { color: var(--c-ty); } .s { color: var(--c-str); }
+  .n { color: var(--c-num); } .cm { color: var(--c-com); } .d { color: var(--c-dim); } .v { color: var(--c-fg); }
+  .caret { display: inline-block; width: 0.6em; height: 1.35em; vertical-align: -0.28em; background: var(--neon);
+    box-shadow: 0 0 12px rgba(94,242,160,.8); border-radius: 1px; animation: breathe 1.6s ease-in-out infinite; }
+  .status { display: flex; justify-content: space-between; padding: 8px 18px 10px; font: 12px var(--mono); color: #5e7568;
+    border-top: 1px solid rgba(150,255,200,.04); }
+  .status .mode { color: var(--neon); margin-right: 10px; }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+  /* Sections */
+  section { padding: 120px 0 0; }
+  .kicker { font: 500 13px var(--mono); color: var(--neon); letter-spacing: .02em; margin: 0 0 14px; }
+  h2 { font-size: clamp(34px, 5vw, 56px); line-height: 1.02; letter-spacing: -0.045em; font-weight: 600; margin: 0 0 16px; }
+  h2 .quiet { color: var(--faint); }
+  .sub { color: var(--muted); max-width: 36em; font-size: 18px; margin: 0; }
+
+  /* Bento */
+  .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-top: 48px; }
+  .card { position: relative; overflow: hidden; border-radius: 22px; padding: 28px; min-height: 290px;
+    background: linear-gradient(180deg, rgba(16,23,20,.9), rgba(10,14,12,.9)); border: 1px solid var(--line);
+    display: flex; flex-direction: column; transition: border-color .3s var(--ease), transform .3s var(--ease); }
+  .card:hover { border-color: var(--line-2); transform: translateY(-2px); }
+  .card h3 { margin: auto 0 6px; font-size: 20px; letter-spacing: -0.025em; font-weight: 600; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .c-a { grid-column: span 4; } .c-b { grid-column: span 2; } .c-c { grid-column: span 2; }
+  .c-d { grid-column: span 2; } .c-e { grid-column: span 2; } .c-f { grid-column: span 6; min-height: 0; }
+
+  /* Keycaps */
+  .keys { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+  kbd, .cap { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; height: 46px; padding: 0 12px;
+    font: 500 15px var(--sans); color: var(--text); border-radius: 11px;
+    background: linear-gradient(180deg, #1a2420, #111814); border: 1px solid rgba(150,255,200,.12);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 3px 0 #050706, 0 6px 14px -4px rgba(0,0,0,.8); }
+  .cap.hot { color: var(--bg); background: linear-gradient(180deg, #7ff6b6, #45d98a); border-color: #7ff6b6;
+    box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 3px 0 #1e8a55, 0 8px 26px -4px rgba(94,242,160,.65); }
+  .keys .row { display: flex; gap: 10px; align-items: center; }
+  .keys .lbl { font: 13px var(--mono); color: var(--faint); margin-left: 4px; }
+
+  /* Mini visuals */
+  .outline { font: 12.5px/1.9 var(--mono); color: var(--c-dim); margin-bottom: 22px; }
+  .outline .fold { color: var(--c-com); }
+  .outline .k { color: var(--c-kw); }
+  .desk { position: relative; height: 150px; border-radius: 12px; margin-bottom: 22px; overflow: hidden;
+    background: linear-gradient(135deg, #3b2a4a, #b1603d 55%, #2d4b6b); }
+  .desk::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+  .desk .w { position: absolute; left: 22%; right: 22%; top: 22%; bottom: 18%; border-radius: 7px; background: #0b0f0d;
+    border: 1px solid rgba(150,255,200,.15); box-shadow: 0 10px 30px rgba(0,0,0,.6), 0 0 30px -6px rgba(94,242,160,.35); }
+  .desk .w::after { content: ""; position: absolute; left: 12%; top: 30%; width: 50%; height: 4px; border-radius: 2px;
+    background: var(--neon); box-shadow: 0 10px 0 rgba(134,227,207,.7), 0 20px 0 rgba(147,169,157,.5), 0 30px 0 rgba(94,242,160,.5); opacity: .8; }
+  .run { font: 12.5px/1.8 var(--mono); border-radius: 10px; background: #080b0a; border: 1px solid var(--line);
+    padding: 10px 14px; margin-bottom: 22px; color: var(--c-fg); }
+  .run .t { color: var(--c-com); display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 6px; }
+  .run .ok { color: var(--neon); }
+  .wave { display: flex; align-items: center; gap: 4px; height: 90px; margin-bottom: 22px; }
+  .wave span { flex: 1; border-radius: 3px; background: linear-gradient(180deg, var(--neon), rgba(94,242,160,.2));
+    animation: tap 1.2s var(--ease) infinite; transform-origin: center; }
+  @keyframes tap { 0%, 100% { transform: scaleY(.15); opacity: .5; } 12% { transform: scaleY(1); opacity: 1; } 40% { transform: scaleY(.25); opacity: .6; } }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 22px; }
+  .sw { height: 64px; border-radius: 10px; border: 1px solid rgba(255,255,255,.06); position: relative; overflow: hidden; }
+  .sw::after { content: ""; position: absolute; left: 10px; right: 30%; top: 16px; height: 3px; border-radius: 2px;
+    background: var(--a); box-shadow: 0 9px 0 var(--b), 0 18px 0 var(--c); opacity: .9; }
+  .sw.on { outline: 2px solid var(--neon); outline-offset: 2px; }
+  .theme-row { display: grid; grid-template-columns: 1fr 1.3fr; gap: 36px; align-items: center; }
+  .theme-row h3 { margin: 0 0 8px; }
+  .theme-row .swatches { margin: 0; }
+  .sw { height: 92px; }
+  .strip { display: flex; flex-wrap: wrap; gap: 22px 40px; align-items: center; justify-content: space-between; }
+  .strip div { display: flex; align-items: baseline; gap: 12px; }
+  .strip strong { font-size: 34px; letter-spacing: -0.04em; font-weight: 600; }
+  .strip span { color: var(--muted); font-size: 14px; }
+
+  /* Shortcuts */
+  .shortcuts { margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+  .sc { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .sc span { color: var(--muted); }
+  .sc .ks { display: flex; gap: 6px; align-items: center; }
+  .sc kbd { min-width: 32px; height: 32px; padding: 0 9px; font-size: 13px; border-radius: 8px; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 2px 0 #050706; }
+  .sc code { font: 12.5px var(--mono); color: var(--faint); margin-left: 10px; }
+
+  /* Real screenshot */
+  .real { margin-top: 48px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line-2);
+    box-shadow: 0 40px 100px -30px rgba(0,0,0,.9), 0 20px 80px -40px rgba(94,242,160,.3); }
+  .real img { display: block; width: 100%; height: auto; }
+
+  /* Final CTA */
+  .end { text-align: center; padding: 140px 0 40px; }
+  .end h2 { margin-bottom: 12px; }
+  footer { border-top: 1px solid var(--line); margin-top: 100px; padding: 28px 0 44px; color: var(--faint); font-size: 13.5px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; }
+  footer a { color: var(--muted); } footer a:hover { color: var(--text); }
+  footer code { font: 12.5px var(--mono); color: var(--muted); }
+
+  /* Reveal on scroll */
+  .rise { opacity: 0; transform: translateY(18px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+  .rise.in { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    .bento { grid-template-columns: 1fr 1fr; }
+    .c-a, .c-f { grid-column: span 2; } .c-b, .c-c, .c-d, .c-e { grid-column: span 1; }
+    .shortcuts { grid-template-columns: 1fr; }
   }
-  button:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
-  .hint { color: var(--faint); font-size: 13.5px; text-align: center; margin: 0; }
-  .shot { display: block; width: 100%; height: auto; margin: 56px 0 64px; border-radius: 14px;
-    box-shadow: 0 30px 80px -30px rgba(0,0,0,.55), 0 0 0 1px var(--line); }
-  .points { display: grid; gap: 28px; grid-template-columns: repeat(3, 1fr); margin-bottom: 64px; }
-  .points h2 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
-  .points p { color: var(--muted); font-size: 14.5px; margin: 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-  td { padding: 9px 0; border-top: 1px solid var(--line); }
-  td:first-child { color: var(--muted); }
-  td kbd, td code { font: 13px "JetBrains Mono", ui-monospace, monospace; }
-  td kbd { color: var(--accent); }
-  td code { color: var(--rose); }
-  td:nth-child(2), td:nth-child(3) { text-align: right; white-space: nowrap; padding-left: 16px; }
-  h3 { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
-    color: var(--faint); margin: 0 0 8px; }
-  footer { margin-top: 72px; color: var(--faint); font-size: 13.5px; text-align: center; }
-  footer a { color: var(--muted); }
-  footer code { font: 12.5px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); }
   @media (max-width: 640px) {
-    main { padding-top: 64px; }
-    h1 { font-size: 32px; }
-    .points { grid-template-columns: 1fr; gap: 20px; }
-    td:nth-child(3) { display: none; }
+    .theme-row { grid-template-columns: 1fr; gap: 22px; }
+    .sw { height: 64px; }
+    nav .links a:not(.pill) { display: none; }
+    .hero { padding-top: 64px; }
+    .ed { grid-template-columns: 1fr; font-size: 11.5px; min-height: 0; }
+    .tree { display: none; }
+    .ln { grid-template-columns: 34px 1fr; } .ln b { padding-right: 12px; }
+    .bento { grid-template-columns: 1fr; }
+    .c-a, .c-b, .c-c, .c-d, .c-e, .c-f { grid-column: span 1; }
+    .card { min-height: 0; }
+    section { padding-top: 88px; }
+    .sc code { display: none; }
+    .cmd code { font-size: 12.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    .rise { opacity: 1; transform: none; }
   }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img class="icon" src="icon.png" alt="">
-    <h1>Dojo</h1>
-    <p class="lede">A quiet code editor for macOS. Neovim that opens like Sublime Text, speaks the Cmd shortcuts you know, and keeps everything else out of the way.</p>
-  </header>
+<div class="sky" aria-hidden="true"></div>
 
-  <section class="install" aria-label="Install">
-    <p class="label">With Homebrew</p>
-    <div class="cmd">
-      <code id="brew">brew install --cask yask123/dojo/dojo</code>
-      <button type="button" data-copy="brew">Copy</button>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.png" alt="">Dojo</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#keys">Shortcuts</a>
+      <a href="https://github.com/yask123/nvim-macos">GitHub</a>
+      <a class="pill" href="#install">Install</a>
     </div>
-    <p class="label">Or in Terminal, without Homebrew</p>
-    <div class="cmd">
-      <code id="curl">bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"</code>
-      <button type="button" data-copy="curl">Copy</button>
+  </div>
+</nav>
+
+<main id="top">
+  <div class="wrap">
+    <header class="hero">
+      <span class="eyebrow"><span class="dot"></span>v1.0 · macOS · built on Neovim</span>
+      <h1>The quiet<br>editor<em>.</em></h1>
+      <p class="lede">Neovim, dressed for the Mac. The Cmd shortcuts you already know, a calm neon‑on‑black screen, and nothing you didn't ask for.</p>
+
+      <div class="install" id="install">
+        <div class="seg" role="tablist" aria-label="Install method">
+          <button role="tab" aria-selected="true" data-tab="brew">Homebrew</button>
+          <button role="tab" aria-selected="false" data-tab="curl">Terminal</button>
+        </div>
+        <div class="cmd">
+          <code id="cmd"><span class="p" aria-hidden="true">$</span><span id="cmd-text">brew install yask123/dojo/dojo</span></code>
+          <button class="copy" type="button" id="copy">Copy</button>
+        </div>
+        <p class="note" id="note">Paste into Terminal, then open <b>Dojo</b> from Spotlight. Any existing Neovim setup is backed up first.</p>
+      </div>
+    </header>
+
+    <div class="stage rise" aria-label="Dojo editing a Python file">
+      <div class="win">
+        <div class="bar"><i></i><i></i><i></i><span>ledger — Dojo</span></div>
+        <div class="ed">
+          <div class="tree" aria-hidden="true">
+            <div><span class="ic">▾</span>ledger</div>
+            <div>&nbsp;&nbsp;<span class="ic">▾</span>src</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="ic">·</span><span class="f">models.py</span></div>
+            <div class="on">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ic">·</span>report.py</div>
+            <div>&nbsp;&nbsp;<span class="ic">▸</span>tests</div>
+            <div>&nbsp;&nbsp;<span class="ic">·</span><span class="f">README.md</span></div>
+            <div>&nbsp;&nbsp;<span class="ic">·</span><span class="f">pyproject.toml</span></div>
+          </div>
+          <div class="code" id="code" aria-hidden="true"></div>
+        </div>
+        <div class="status"><span><span class="mode" id="mode">Insert</span>src/ledger/report.py</span><span id="pos">Ln 14, Col 5 · Python · main</span></div>
+      </div>
     </div>
-  </section>
-  <p class="hint">Installs everything it needs and backs up any existing Neovim setup. Then open <strong>Dojo</strong> from Spotlight.</p>
 
-  <img class="shot" src="screenshot.png" alt="Dojo showing a Python project: a quiet file tree on the left, code on the right, and a one-line status bar">
+    <section id="features">
+      <p class="kicker rise">// everything you need</p>
+      <h2 class="rise">Everything you need.<br><span class="quiet">Nothing you don't.</span></h2>
+      <p class="sub rise">Opens like Sublime Text. Types like Vim when you're ready. Every panel you didn't ask for is gone.</p>
 
-  <section class="points">
-    <div><h2>Keys you already know</h2><p>⌘P, ⌘⇧F, F12, ⌘/. ⌘K ⌘S shows them all, with the Vim way beside each.</p></div>
-    <div><h2>Read code top‑down</h2><p>Big files open as an outline. Fold in and out one level at a time.</p></div>
-    <div><h2>Quiet by design</h2><p>One typeface, one calm theme, no clutter. The desktop dims while you work.</p></div>
-  </section>
+      <div class="bento">
+        <article class="card c-a rise">
+          <div class="keys" aria-hidden="true">
+            <div class="row"><span class="cap">⌘</span><span class="cap hot">P</span><span class="lbl">find a file</span></div>
+            <div class="row"><span class="cap">⌘</span><span class="cap">⇧</span><span class="cap">F</span><span class="lbl">search the project</span></div>
+            <div class="row"><span class="cap">F12</span><span class="lbl">go to definition</span></div>
+            <div class="row"><span class="cap">⌘</span><span class="cap">/</span><span class="lbl">comment</span></div>
+          </div>
+          <h3>Keys you already know.</h3>
+          <p>⌘K ⌘S shows them all, with the Vim way beside each, for when you want to go faster.</p>
+        </article>
 
-  <section>
-    <h3>The essentials</h3>
-    <table>
-      <tr><td>Open a folder</td><td><kbd>⌘O</kbd></td><td><code>:cd</code></td></tr>
-      <tr><td>Find a file</td><td><kbd>⌘P</kbd></td><td><code>Space Space</code></td></tr>
-      <tr><td>Search the project</td><td><kbd>⌘⇧F</kbd></td><td><code>Space /</code></td></tr>
-      <tr><td>Go to definition</td><td><kbd>F12</kbd></td><td><code>gd</code></td></tr>
-      <tr><td>Run this file</td><td><kbd>⌘R</kbd></td><td><code>Space r r</code></td></tr>
-      <tr><td>Every shortcut</td><td><kbd>⌘K ⌘S</kbd></td><td><code>Space ?</code></td></tr>
-    </table>
-  </section>
+        <article class="card c-b rise">
+          <div class="outline" aria-hidden="true">
+            <div><span class="k">class</span> Summary<span class="d">:</span></div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;month<span class="d">:</span> <span class="ty">date</span></div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">def</span> saved<span class="fold"> ··· 2 lines</span></div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">def</span> rate<span class="fold"> ··· 4 lines</span></div>
+            <div><span class="k">def</span> by_month<span class="fold"> ··· 12 lines</span></div>
+            <div><span class="k">def</span> best_month<span class="fold"> ··· 3 lines</span></div>
+          </div>
+          <h3>Read top‑down.</h3>
+          <p>Big files open as an outline. Unfold one level at a time.</p>
+        </article>
 
-  <footer>
-    Built on <a href="https://neovim.io">Neovim</a>, <a href="https://www.lazyvim.org">LazyVim</a> and <a href="https://neovide.dev">Neovide</a> · macOS ·
-    <a href="https://github.com/yask123/nvim-macos">Source</a> ·
-    Update with <code>nvim-update</code> · Remove with <code>brew uninstall --cask dojo</code>
-  </footer>
+        <article class="card c-c rise">
+          <div class="desk" aria-hidden="true"><div class="w"></div></div>
+          <h3>Focus, by design.</h3>
+          <p>The desktop dims behind the window while you work.</p>
+        </article>
+
+        <article class="card c-d rise">
+          <div class="run" aria-hidden="true">
+            <div class="t"><span>report.py finished</span><span>⌘R</span></div>
+            <div>Your name: Yask</div>
+            <div class="ok">Hi Yask!</div>
+          </div>
+          <h3>Run with ⌘R.</h3>
+          <p>Output slides up from the bottom. ⌘J tucks it away.</p>
+        </article>
+
+        <article class="card c-e rise">
+          <div class="wave" aria-hidden="true" id="wave"></div>
+          <h3>Sounds like paper.</h3>
+          <p>A gentle typewriter as you type. A small chime when you save.</p>
+        </article>
+
+        <article class="card c-f rise">
+          <div class="theme-row">
+            <div>
+              <h3>Phosphor, and friends.</h3>
+              <p>Dojo's own theme: near‑black, mint text, one neon green. Or browse a handful of others with ⌘K ⌘T; the editor recolours as you move.</p>
+            </div>
+            <div class="swatches" aria-hidden="true">
+              <div class="sw on" style="background:#0b0f0d;--a:#5ef2a0;--b:#86e3cf;--c:#c5e59a"></div>
+              <div class="sw" style="background:#232136;--a:#c4a7e7;--b:#ea9a97;--c:#9ccfd8"></div>
+              <div class="sw" style="background:#1e1e2e;--a:#cba6f7;--b:#89b4fa;--c:#a6e3a1"></div>
+              <div class="sw" style="background:#faf4ed;--a:#907aa9;--b:#d7827e;--c:#286983"></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="keys">
+      <p class="kicker rise">// the essentials</p>
+      <h2 class="rise">Six keys to start.</h2>
+      <div class="shortcuts rise">
+        <div class="sc"><span>Open a folder</span><span class="ks"><kbd>⌘</kbd><kbd>O</kbd><code>:cd</code></span></div>
+        <div class="sc"><span>Find a file</span><span class="ks"><kbd>⌘</kbd><kbd>P</kbd><code>Space Space</code></span></div>
+        <div class="sc"><span>Search the project</span><span class="ks"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>F</kbd><code>Space /</code></span></div>
+        <div class="sc"><span>Go to definition</span><span class="ks"><kbd>F12</kbd><code>gd</code></span></div>
+        <div class="sc"><span>Run this file</span><span class="ks"><kbd>⌘</kbd><kbd>R</kbd><code>Space r r</code></span></div>
+        <div class="sc"><span>Every shortcut</span><span class="ks"><kbd>⌘</kbd><kbd>K</kbd><kbd>⌘</kbd><kbd>S</kbd><code>Space ?</code></span></div>
+      </div>
+      <div class="real rise"><img src="screenshot.png" alt="The real Dojo app editing a Python project, in the Phosphor theme" loading="lazy"></div>
+    </section>
+
+    <section class="end">
+      <h2 class="rise">Make some room<br><span class="quiet">to think.</span></h2>
+      <div class="install rise">
+        <div class="cmd">
+          <code><span class="p" aria-hidden="true">$</span><span id="cmd-2">brew install yask123/dojo/dojo</span></code>
+          <button class="copy" type="button" data-copy="cmd-2">Copy</button>
+        </div>
+        <p class="note">No Homebrew? Use the <a href="#install" data-tab-link="curl" style="color:var(--neon)">Terminal installer</a>.</p>
+      </div>
+    </section>
+  </div>
 </main>
+
+<footer>
+  <div class="wrap">
+    <span>Built on <a href="https://neovim.io">Neovim</a>, <a href="https://www.lazyvim.org">LazyVim</a> and <a href="https://neovide.dev">Neovide</a>. For macOS.</span>
+    <span><a href="https://github.com/yask123/nvim-macos">Source</a> · Update with <code>nvim-update</code> · Remove with <code>brew uninstall --cask dojo</code></span>
+  </div>
+</footer>
+
 <script>
-  for (const button of document.querySelectorAll("[data-copy]")) {
-    button.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);
-        button.textContent = "Copied";
-      } catch {
-        button.textContent = "Select & copy";
-      }
-      setTimeout(() => (button.textContent = "Copy"), 1600);
-    });
+  // Install tabs
+  const commands = {
+    brew: { text: "brew install yask123/dojo/dojo", note: 'Paste into Terminal, then open <b>Dojo</b> from Spotlight. Any existing Neovim setup is backed up first.' },
+    curl: { text: 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"', note: 'Installs Homebrew too if you don\'t have it. Then open <b>Dojo</b> from Spotlight.' },
+  };
+  const tabs = document.querySelectorAll(".seg button");
+  function select(name) {
+    tabs.forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    document.getElementById("cmd-text").textContent = commands[name].text;
+    document.getElementById("note").innerHTML = commands[name].note;
   }
+  tabs.forEach((t) => t.addEventListener("click", () => select(t.dataset.tab)));
+  document.querySelectorAll("[data-tab-link]").forEach((a) => a.addEventListener("click", () => select(a.dataset.tabLink)));
+
+  // Copy buttons
+  async function copy(button, text) {
+    try { await navigator.clipboard.writeText(text); button.textContent = "Copied"; button.classList.add("done"); }
+    catch { button.textContent = "Select & copy"; }
+    setTimeout(() => { button.textContent = "Copy"; button.classList.remove("done"); }, 1600);
+  }
+  document.getElementById("copy").addEventListener("click", (e) => copy(e.currentTarget, document.getElementById("cmd-text").textContent));
+  document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", () => copy(b, document.getElementById(b.dataset.copy).textContent)));
+
+  // The live editor: Phosphor-coloured code, the last function typed out
+  const lines = [
+    [["cm", '"""Monthly summaries for a household ledger."""']],
+    [],
+    [["k", "from"], ["v", " dataclasses "], ["k", "import"], ["v", " dataclass"]],
+    [["k", "from"], ["v", " decimal "], ["k", "import"], ["ty", " Decimal"]],
+    [],
+    [],
+    [["fn", "@dataclass"], ["d", "("], ["v", "frozen"], ["d", "="], ["n", "True"], ["d", ")"]],
+    [["k", "class"], ["ty", " Summary"], ["d", ":"]],
+    [["v", "    income"], ["d", ": "], ["ty", "Decimal"]],
+    [["v", "    spending"], ["d", ": "], ["ty", "Decimal"]],
+    [],
+    [["k", "    def"], ["fn", " saved"], ["d", "("], ["v", "self"], ["d", ") → "], ["ty", "Decimal"], ["d", ":"]],
+  ];
+  const typed = [
+    [["k", "        return"], ["v", " self"], ["d", "."], ["v", "income"], ["d", " - "], ["v", "self"], ["d", "."], ["v", "spending"]],
+  ];
+  const after = [
+    [],
+    [["fn", "    @property"]],
+    [["k", "    def"], ["fn", " rate"], ["d", "("], ["v", "self"], ["d", ") → "], ["ty", "float"], ["d", ":"]],
+    [["k", "        if not"], ["v", " self"], ["d", "."], ["v", "income"], ["d", ":"]],
+    [["k", "            return"], ["n", " 0.0"]],
+    [["k", "        return"], ["fn", " float"], ["d", "("], ["v", "self"], ["d", "."], ["v", "saved"], ["d", " / "], ["v", "self"], ["d", "."], ["v", "income"], ["d", ")"]],
+    [],
+  ];
+  const code = document.getElementById("code");
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const render = (parts) => parts.map(([c, t]) => `<span class="${c}">${esc(t)}</span>`).join("");
+  function line(no, html, cur) { return `<div class="ln${cur ? " cur" : ""}"><b>${no}</b><span>${html}</span></div>`; }
+  function draw(partial, count) {
+    let html = lines.map((p, i) => line(i + 1, render(p), false)).join("");
+    let shown = [], left = count;
+    for (const [c, t] of partial) { if (left <= 0) break; shown.push([c, t.slice(0, left)]); left -= t.length; }
+    html += line(lines.length + 1, render(shown) + '<span class="caret"></span>', true);
+    html += after.map((p, i) => line(lines.length + 2 + i, render(p), false)).join("");
+    code.innerHTML = html;
+    const col = shown.reduce((n, [, t]) => n + t.length, 0) + 1;
+    document.getElementById("pos").textContent = `Ln ${lines.length + 1}, Col ${col} · Python · main`;
+  }
+  const target = typed[0], total = target.reduce((n, [, t]) => n + t.length, 0);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) { draw(target, total); document.getElementById("mode").textContent = ""; }
+  else {
+    let i = 8; draw(target, i);
+    const tick = () => {
+      if (i < total) { i++; draw(target, i); setTimeout(tick, 45 + Math.random() * 90); }
+      else setTimeout(() => { document.getElementById("mode").textContent = ""; setTimeout(() => { i = 8; document.getElementById("mode").textContent = "Insert"; draw(target, i); tick(); }, 2600); }, 400);
+    };
+    setTimeout(tick, 900);
+  }
+
+  // Typewriter waveform
+  const wave = document.getElementById("wave");
+  for (let k = 0; k < 28; k++) {
+    const s = document.createElement("span");
+    s.style.height = `${30 + ((k * 37) % 70)}%`;
+    s.style.animationDelay = `${(k * 0.137) % 1.2}s`;
+    wave.appendChild(s);
+  }
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
+  document.querySelectorAll(".rise").forEach((el) => io.observe(el));
 </script>
 </body>
 </html>

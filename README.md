@@ -65,7 +65,7 @@ keys.
 With Homebrew:
 
 ```bash
-brew install --cask yask123/dojo/dojo
+brew install yask123/dojo/dojo
 ```
 
 Or without Homebrew (the script installs it):
