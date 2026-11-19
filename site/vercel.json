@@ -1,4 +1,13 @@
 {
   "trailingSlash": false,
-  "redirects": [{ "source": "/", "destination": "/dojo", "permanent": false }]
+  "redirects": [
+    { "source": "/", "destination": "/code", "permanent": false },
+    { "source": "/dojo", "destination": "/code", "permanent": true },
+    { "source": "/dojo/:path+", "destination": "/code/:path+", "permanent": true },
+    {
+      "source": "/code/install",
+      "destination": "https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh",
+      "permanent": false
+    }
+  ]
 }
