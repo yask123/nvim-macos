@@ -31,7 +31,18 @@ if ! "$test_config/scripts/restore-plugins.sh" "$test_config" >"$restore_log" 2>
 fi
 nvim -u NONE --headless -l "$test_config/tests/treesitter.lua"
 nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/smoke.lua"
-nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/dojo.lua"
+# Headless Neovim 0.12 now and then crashes on its own in this test (a bus
+# error, with or without changes to the config). A crash is tried again; a
+# failed check is not.
+attempt=1
+until nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/dojo.lua"; do
+  status=$?
+  if [[ $status -lt 128 || $attempt -ge 3 ]]; then
+    exit "$status"
+  fi
+  attempt=$((attempt + 1))
+  printf 'Neovim crashed (exit %d); running the editor test again (%d of 3)\n' "$status" "$attempt" >&2
+done
 printf '\n'
 
 if ! cmp -s "$repo_root/lazy-lock.json" "$test_config/lazy-lock.json"; then
