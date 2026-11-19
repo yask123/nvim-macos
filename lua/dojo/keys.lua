@@ -29,8 +29,8 @@ return {
           { mac = "⌘P", keys = { "<D-p>" }, mode = NIV, run = A.find_file, desc = "Find file", vim = "Space Space", tip = "Fuzzy-find any file; recent files float to the top." },
           { mac = "⌘⇧P", keys = { "<D-P>", "<D-S-p>", "<F1>" }, mode = NIV, run = A.palette, desc = "Command palette", vim = "Space :", tip = "Every action, searchable, with its shortcut. F1 works too." },
           { mac = "⌘K ⌘S", keys = { "<D-k><D-s>", "<leader>?" }, run = A.cheatsheet, desc = "Keyboard shortcuts (this sheet)", vim = "Space ?" },
-          { mac = "⌘O", keys = { "<D-o>" }, mode = NIV, run = A.open_folder, desc = "Open folder…", vim = ":cd path", tip = "Native macOS folder picker; restores that project's last session." },
-          { mac = "⌘⌥O", keys = { "<D-M-o>", "<M-D-o>" }, mode = NIV, run = A.recent_projects, desc = "Recent projects", vim = "Space f p" },
+          { mac = "⌘O", keys = { "<D-o>" }, mode = NIV, run = A.open_folder, desc = "Open folder…", vim = ":cd path", tip = "Browse with h j k l, / to find, Enter opens; restores that project's last session." },
+          { mac = "⌘⌥O", keys = { "<D-M-o>", "<M-D-o>" }, mode = NIV, run = A.recent_projects, desc = "Recent projects", vim = "", tip = "Every folder you've opened, newest first. Enter flips back to the one before." },
           { mac = "⌘E", keys = { "<D-e>" }, mode = NIV, run = A.recent_files, desc = "Recent files", vim = "Space f r" },
           { mac = "⌘B", keys = { "<D-b>" }, mode = NIV, run = A.toggle_explorer, desc = "Show / hide the file tree", vim = "Space e" },
           { mac = "⌘J", keys = { "<C-`>", "<D-j>" }, mode = { "n", "i", "t" }, run = A.toggle_terminal, desc = "Show / hide the bottom panel (terminal, run output)", vim = "Ctrl-/" },
@@ -41,7 +41,7 @@ return {
           { mac = "⌘⇧T", keys = { "<D-T>", "<D-S-t>" }, mode = NIV, run = A.reopen_closed, desc = "Reopen closed file", vim = "Space f r" },
           { vim = "Space f n", run = A.new_file, desc = "New file" },
           { mac = "⌘N", desc = "New window (another project side by side)", vim = "" },
-          { mac = "⌘,", keys = { "<D-,>" }, mode = NIV, run = A.settings, desc = "Settings (config files)", vim = "Space f c" },
+          { mac = "⌘,", keys = { "<D-,>" }, mode = NIV, run = A.settings, desc = "Settings", vim = "", tip = "Theme, text size, sounds and dimming; the config files are one row down." },
         },
       },
       {
@@ -78,6 +78,7 @@ return {
           { keys = { "<S-F8>" }, mode = NI, run = A.prev_problem, desc = "Previous problem", hidden = true },
           { mac = "⌘⇧M", keys = { "<D-M>", "<D-S-m>" }, mode = NI, run = A.problems, desc = "Problems panel", vim = "Space x x" },
           { mac = "⇥  ↩", desc = "Accept completion", vim = "Tab · Enter" },
+          { mac = "⌃K", desc = "Typing a call: every way to call it", vim = "Ctrl-k" },
         },
       },
       {
@@ -197,7 +198,7 @@ return {
       {
         title = "Move",
         items = {
-          { vim = "h j k l", desc = "← ↓ ↑ →" },
+          { vim = "h j k l", desc = "← ↓ ↑ →  (hold to go faster)" },
           { vim = "w  b  e", desc = "Next word · back · word end" },
           { vim = "0  ^  $", desc = "Line start · first char · end" },
           { vim = "gg  G", desc = "File top · bottom" },

@@ -73,7 +73,7 @@ end
 function M.toggle()
   local on = not saved_on()
   M.set(on)
-  vim.notify("Desktop dimming " .. (on and "on" or "off"), vim.log.levels.INFO, { title = "Dojo" })
+  vim.notify("Desktop dimming " .. (on and "on" or "off"), vim.log.levels.INFO, { title = require("dojo").name })
 end
 
 function M.setup()

@@ -125,21 +125,19 @@ local function run()
   require("dojo.project").open(dir)
   assert_equal(vim.fn.getcwd(), vim.fn.resolve(dir), "project cwd")
   assert(vim.o.titlestring:find(vim.fs.basename(dir), 1, true), "window title names the project")
+  assert_equal(vim.o.titlestring, vim.fs.basename(dir) .. " — Code", "window title ends with the app's name")
 
-  -- ⌘R runs the file in a bottom panel; focus returns to the code when it
-  -- ends, the output stays, and ⌘J closes it.
   -- Headless Neovim 0.12 can crash if a keymap scan (which-key's timer, or a
-  -- language server attaching) lands while a terminal job starts or ends; it
-  -- hasn't happened with a UI attached. So: a shell script (no language
-  -- server) and which-key paused for the rest of the test.
+  -- language server attaching) lands while windows with their own keys come
+  -- and go, or a terminal job starts or ends; it hasn't happened with a UI
+  -- attached. So which-key is paused for the rest of the test.
   pcall(function()
     require("which-key.triggers").attach = function() end
   end)
-  if vim.env.CI then
-    goto after_run -- still crashes headless Neovim on the CI runner; checked locally and by hand
-  end
-  do
-    -- The project test above opens its file tree a moment later; let it, then close it.
+
+  -- Opening a project shows its file tree a moment later; let it, then close
+  -- it, so it doesn't take the focus from what is tested next.
+  local function settle()
     vim.wait(2000, function()
       return #Snacks.picker.get({ source = "explorer" }) > 0
     end)
@@ -147,6 +145,140 @@ local function run()
       picker:close()
     end
     vim.cmd("silent! only")
+  end
+  settle()
+
+  -- Recent projects: Code's own list, newest first. Any folder counts, not
+  -- only git repositories.
+  local recent = require("dojo.recent")
+  recent.scratch = {} -- this test's folders live in the temp dir
+  recent.file = vim.fn.tempname() .. ".json"
+  local root = vim.fn.tempname()
+  for _, name in ipairs({ "alpha/inner", "beta", "learn-app", "learn-python", "PyProjects", ".hidden" }) do
+    vim.fn.mkdir(root .. "/" .. name, "p")
+  end
+  vim.fn.writefile({ "print('hi')" }, root .. "/learn-python/two_sum.py")
+  root = vim.uv.fs_realpath(root)
+  assert_equal(recent.list(), {}, "no projects yet")
+  recent.touch(root .. "/alpha")
+  recent.touch(root .. "/beta")
+  recent.touch(vim.env.HOME)
+  local function names()
+    return vim.tbl_map(function(entry)
+      return entry.name
+    end, recent.list())
+  end
+  assert_equal(names(), { "beta", "alpha" }, "newest project first; the home folder is not a project")
+  recent.touch(root .. "/alpha")
+  assert_equal(names(), { "alpha", "beta" }, "opening a project again moves it to the top")
+  local _, lives = recent.label(root .. "/alpha", 500)
+  assert_equal(lives, vim.fn.fnamemodify(root, ":~"), "a project says where it lives")
+  vim.fn.delete(root .. "/beta", "d")
+  assert_equal(names(), { "alpha" }, "a deleted folder drops off the list")
+  vim.fn.mkdir(root .. "/beta", "p")
+  local _, where = recent.label("/a/bbbbbbbbbb/cccccccccc/dddddddddd/eeeeeeeeee/name", 20)
+  assert_equal(where, "/…/eeeeeeeeee", "a long path is shortened in the middle")
+  -- The first launch fills the list from saved sessions (one per folder, plus
+  -- %%branch for git branches).
+  local sessions = vim.fn.tempname()
+  vim.fn.mkdir(sessions, "p")
+  local function session(path, suffix)
+    vim.fn.writefile({ "" }, sessions .. "/" .. path:gsub("/", "%%") .. (suffix or "") .. ".vim")
+  end
+  session(root .. "/alpha")
+  session(root .. "/beta", "%%feature")
+  session(root .. "/beta")
+  session(root .. "/gone")
+  local seeded = vim.tbl_map(function(entry)
+    return entry.path
+  end, recent.seed(sessions))
+  table.sort(seeded)
+  assert_equal(seeded, { root .. "/alpha", root .. "/beta" }, "sessions become recent projects, once each")
+
+  -- The welcome screen lists them with 1-9 to open.
+  local welcome = LazyVim.opts("snacks.nvim").dashboard
+  local project_rows = welcome.sections[2][1]()
+  assert_equal(project_rows[1].key, "1", "first recent project opens with 1")
+  assert_equal(project_rows[1].desc[1][1]:gsub("%s+$", ""), "alpha", "welcome screen names the project")
+
+  -- ⌘O: browse for a folder inside the window.
+  local browse = require("dojo.browse")
+  local function press(lhs, mode)
+    local map = vim.fn.maparg(lhs, mode or "n", false, true)
+    assert(map.callback, "the browser maps " .. lhs)
+    map.callback()
+  end
+  recent.touch(root .. "/learn-python")
+  browse.open({ dir = root, select = "beta" })
+  local view = browse.peek()
+  assert_equal(
+    view.shown,
+    { "alpha", "beta", "learn-app", "learn-python", "PyProjects" },
+    "folders by name, dot-folders hidden"
+  )
+  assert_equal(view.selected, "beta", "the browser starts on the folder asked for")
+  assert(vim.api.nvim_buf_get_lines(view.buf, 1, 2, false)[1]:find(vim.fs.basename(root), 1, true), "path line")
+  press("k")
+  press("l")
+  assert_equal(browse.peek().dir, root .. "/alpha", "l steps into the lit folder")
+  assert_equal(browse.peek().shown, { "inner" }, "and lists what is inside")
+  press("h")
+  assert_equal({ browse.peek().dir, browse.peek().selected }, { root, "alpha" }, "h steps back out, same row lit")
+  vim.wait(1000, function()
+    return #browse.peek().inside > 0
+  end)
+  assert_equal(browse.peek().inside, { "inner/" }, "the right column shows what is inside")
+  press(".")
+  assert_equal(browse.peek().shown[1], ".hidden", ". shows dot-folders")
+  press(".")
+  browse.type("lea")
+  view = browse.peek()
+  assert_equal(view.shown, { "learn-python", "learn-app" }, "typing narrows; folders you've opened come first")
+  assert_equal(view.target, root .. "/learn-python", "Enter would open the first match")
+  browse.type("py")
+  assert_equal(browse.peek().selected, "learn-python", "a folder you've opened beats a closer match you haven't")
+  browse.type("zzz")
+  assert_equal(browse.peek().target, nil, "nothing matches, nothing to open")
+  browse.type("learn-p")
+  press("<CR>", "i")
+  assert(not browse.is_open(), "Enter closes the browser")
+  vim.wait(2000, function()
+    return vim.fn.getcwd() == root .. "/learn-python"
+  end)
+  assert_equal(vim.fn.getcwd(), root .. "/learn-python", "Enter opens the folder as the project")
+  assert_equal(names()[1], "learn-python", "and it tops the recent list")
+  settle()
+  browse.open()
+  assert_equal(
+    { browse.peek().dir, browse.peek().selected },
+    { root, "learn-python" },
+    "the browser starts beside the project you are in"
+  )
+  browse.open()
+  assert(not browse.is_open(), "⌘O again closes the browser")
+
+  -- ⌘, : the Settings sheet lists a few choices, and remembers them.
+  local settings = require("dojo.settings")
+  settings.file = vim.fn.tempname() .. ".json"
+  assert_equal(settings.get("zoom", 1), 1, "a setting has a default")
+  settings.set("zoom", 1.1)
+  assert_equal(vim.json.decode(table.concat(vim.fn.readfile(settings.file))).zoom, 1.1, "settings are written down")
+  settings.open()
+  local setting_rows = settings.peek()
+  assert_equal(setting_rows[1].name, "Colour theme", "settings start with the theme")
+  assert(setting_rows[1].value ~= "", "and say which theme is on")
+  assert_equal(setting_rows[#setting_rows].name, "Config files", "config files are the last row")
+  settings.open()
+  assert(not settings.is_open(), "⌘, again closes the sheet")
+
+  -- ⌘R runs the file in a bottom panel; focus returns to the code when it
+  -- ends, the output stays, and ⌘J closes it. A shell script, so no language
+  -- server attaches (see the which-key note above).
+  if vim.env.CI then
+    goto after_run -- still crashes headless Neovim on the CI runner; checked locally and by hand
+  end
+  do
+    settle()
     local script = vim.fn.tempname() .. ".sh"
     vim.fn.writefile({ 'echo "hello from run"' }, script)
     vim.cmd.edit(script)
@@ -189,6 +321,96 @@ local function run()
   for _, name in ipairs({ "Dojo", "DojoPalette", "DojoOpen" }) do
     assert_equal(vim.fn.exists(":" .. name), 2, "command " .. name)
   end
+
+  -- The call hint: names and defaults, the argument you are on lit up, and
+  -- the fullest form when the server leads with an empty one (defaultdict).
+  local signature = require("dojo.signature")
+  local function form(label, ...)
+    local parameters, from = {}, 1
+    for _, text in ipairs({ ... }) do
+      local s, e = label:find(text, from, true)
+      assert(s, "bad test parameter: " .. text)
+      table.insert(parameters, { label = { s - 1, e } })
+      from = e + 1
+    end
+    return { label = label, parameters = parameters }
+  end
+  local function lit(row)
+    for _, chunk in ipairs(row) do
+      if chunk[2] == "DojoSignatureActive" then
+        return chunk[1]
+      end
+    end
+  end
+  local factory = "default_factory: (() -> _VT@defaultdict) | None"
+  local defaultdict = {
+    activeSignature = 0,
+    signatures = {
+      form("() -> defaultdict"),
+      form("(**kwargs: _VT@defaultdict) -> defaultdict", "**kwargs: _VT@defaultdict"),
+      form("(" .. factory .. ", /) -> defaultdict", factory, "/"),
+      form(
+        "("
+          .. factory
+          .. ", map: SupportsKeysAndGetItem[str, _VT@defaultdict], /, **kwargs: _VT@defaultdict) -> defaultdict",
+        factory,
+        "map: SupportsKeysAndGetItem[str, _VT@defaultdict]",
+        "/",
+        "**kwargs: _VT@defaultdict"
+      ),
+    },
+  }
+  local rows = signature.render(defaultdict)
+  assert_equal(signature.text(rows), { "(default_factory, map, /, **kwargs)  +3" }, "defaultdict( hint")
+  assert_equal(lit(rows[1]), "default_factory", "defaultdict( lights the first argument")
+  assert_equal(
+    signature.text(signature.render(defaultdict, { all = true })),
+    { "()", "(**kwargs)", "(default_factory, /)", "(default_factory, map, /, **kwargs)" },
+    "every way to call defaultdict"
+  )
+  -- While you type, the hint stays on the form it showed: the server moves to
+  -- (default_factory, /) after the first character, but only the lit name moves.
+  local _, shape = signature.render(defaultdict)
+  defaultdict.activeSignature, defaultdict.activeParameter = 2, 0
+  assert_equal(signature.text((signature.render(defaultdict))), { "(default_factory, /)  +3" }, "the server's pick")
+  rows = signature.render(defaultdict, { keep = shape })
+  assert_equal(signature.text(rows), { "(default_factory, map, /, **kwargs)  +3" }, "the hint keeps its form")
+  assert_equal(lit(rows[1]), "default_factory", "and lights what the server says you are on")
+  local two_sum = {
+    activeSignature = 0,
+    activeParameter = 1,
+    signatures = { form("(nums: list[int], target: int = 0) -> list[int]", "nums: list[int]", "target: int = 0") },
+  }
+  rows = signature.render(two_sum)
+  assert_equal(signature.text(rows), { "(nums, target: int = 0)" }, "a plain type shows for the argument you are on")
+  assert_equal(lit(rows[1]), "target", "the second argument is lit after the comma")
+  two_sum.activeParameter = 5
+  assert_equal(lit(signature.render(two_sum)[1]), nil, "past the last argument nothing is lit")
+  assert(
+    signature.text(signature.render(two_sum, { width = 12 }))[1]:find("…", 1, true),
+    "a narrow window trims the hint"
+  )
+  assert_equal(signature.render({ signatures = {} }), nil, "no signature, no hint")
+  assert_equal(signature.render({ signatures = { form("() -> None") } }), nil, "a call that takes nothing has no hint")
+
+  -- Holding h j k l speeds up; taps and counts stay exact.
+  local hold = require("dojo.hold")
+  local function presses(key, count, gap, at)
+    local total = 0
+    for i = 0, count - 1 do
+      total = total + hold.steps(key, at + i * gap)
+    end
+    return total
+  end
+  hold.reset()
+  assert_equal(presses("j", 5, 130, 10000), 5, "five taps of j are five lines")
+  assert_equal(presses("j", 2, 85, 20000), 2, "a fast double tap is two lines")
+  -- A held key: macOS waits half a second, then repeats about every 83 ms.
+  local held = hold.steps("j", 30000) + presses("j", 30, 83, 30500)
+  assert(held > 150 and held < 260, "three seconds of holding j covers far more than 31 lines: " .. held)
+  assert_equal(hold.steps("k", 33000), 1, "another key starts from one step again")
+  assert_equal(vim.fn.maparg("j", "n", false, true).desc, "Down (hold to go faster)", "j mapping")
+  assert_equal(vim.fn.maparg("l", "x", false, true).desc, "Right (hold to go faster)", "l mapping in visual mode")
 
   -- Actions table has no dangling references from the registry.
   for _, group in ipairs(groups) do

@@ -25,12 +25,40 @@ function M.run_result(code)
   end
 end
 
-function M.toggle()
+-- Can sound play here at all? (Not headless, over SSH, or with NVIM_SFX=0.)
+function M.available()
   local sfx = engine()
-  if sfx and not sfx.blocked then
-    sfx.toggle()
+  return sfx ~= nil and sfx.opts ~= nil and not sfx.blocked
+end
+
+function M.enabled()
+  local sfx = engine()
+  return sfx ~= nil and sfx.opts ~= nil and sfx.opts.enabled == true
+end
+
+-- Turn typing sounds on or off, and remember it for next launch.
+function M.set(on)
+  if not M.available() then
+    return
+  end
+  engine().set_enabled(on)
+  require("dojo.settings").set("sound", on)
+end
+
+function M.toggle()
+  if M.available() then
+    M.set(not M.enabled())
+    vim.notify(
+      "Typing sounds " .. (M.enabled() and "on" or "off"),
+      vim.log.levels.INFO,
+      { title = require("dojo").name }
+    )
   else
-    vim.notify("Sound effects are off here (no UI, SSH, or NVIM_SFX=0)", vim.log.levels.INFO, { title = "Dojo" })
+    vim.notify(
+      "Sound effects are off here (no UI, SSH, or NVIM_SFX=0)",
+      vim.log.levels.INFO,
+      { title = require("dojo").name }
+    )
   end
 end
 

@@ -1,7 +1,32 @@
 -- Dojo plugin specs: welcome screen, completion, typing sounds.
 
--- The welcome screen: a quiet wordmark, a few actions, your recent projects.
-local header = "d o j o"
+-- The welcome screen: a quiet wordmark, the projects you were last in (1-9
+-- opens one, Enter opens the first), then a few actions.
+local header = vim.trim((require("dojo").name:lower():gsub(".", "%0 "))) -- "c o d e"
+local welcome_width = 46
+
+-- Your recent projects as rows: the folder's name, then where it lives.
+local function recent_projects()
+  local entries = require("dojo.recent").list(5)
+  local name_width = 0
+  for _, entry in ipairs(entries) do
+    name_width = math.max(name_width, vim.fn.strdisplaywidth(entry.name))
+  end
+  name_width = math.min(name_width, 24) + 3
+  local rows = {}
+  for index, entry in ipairs(entries) do
+    local name = Snacks.picker.util.align(entry.name, name_width, { truncate = true })
+    local _, where = require("dojo.recent").label(entry.path, welcome_width - name_width - 3)
+    rows[index] = {
+      desc = { { name, hl = "SnacksDashboardDesc" }, { where, hl = "SnacksDashboardDir" } },
+      key = tostring(index),
+      action = function()
+        require("dojo.project").open(entry.path)
+      end,
+    }
+  end
+  return rows
+end
 
 return {
   -- Welcome screen, pickers, explorer, scroll.
@@ -34,14 +59,12 @@ return {
         },
       })
       opts.dashboard = {
-        width = 44,
+        width = welcome_width,
         preset = {
           header = header,
           keys = {
             { key = "o", desc = "Open Folder…", action = project("choose_folder") },
-            { key = "f", desc = "Find File", action = ":lua require('dojo.actions').find_file()" },
             { key = "r", desc = "Recent Files", action = ":lua Snacks.picker.recent()" },
-            { key = "s", desc = "Restore Session", section = "session" },
             { key = "?", desc = "Keyboard Shortcuts", action = ":Dojo" },
             { key = ",", desc = "Settings", action = ":lua require('dojo.actions').settings()" },
             { key = "q", desc = "Quit", action = ":qa" },
@@ -49,8 +72,8 @@ return {
         },
         sections = {
           { section = "header", padding = 3 },
-          { section = "keys", gap = 0, padding = 3 },
-          { title = "Recent Projects", section = "projects", padding = 1, limit = 5 },
+          { title = "Recent Projects", padding = 2, recent_projects },
+          { section = "keys", gap = 0, padding = 1 },
         },
       }
     end,
@@ -63,15 +86,25 @@ return {
       enabled = function()
         return vim.bo.buftype ~= "prompt" and vim.b.completion ~= false
       end,
-      keymap = { preset = "super-tab", ["<CR>"] = { "accept", "fallback" } },
+      keymap = {
+        preset = "super-tab",
+        ["<CR>"] = { "accept", "fallback" },
+        -- While typing a call: every way to call it (lua/dojo/signature.lua).
+        ["<C-k>"] = {
+          function()
+            require("dojo.signature").toggle_all()
+            return true
+          end,
+        },
+      },
       completion = {
         menu = { scrollbar = false },
         documentation = { auto_show = true, auto_show_delay_ms = 200 },
       },
-      -- Signature help only when asked (Ctrl-K in insert mode): for built-ins
-      -- it shows raw type-stub overloads (map's _T1@__new__ ...), not help.
+      -- What a call takes is Dojo's own one-line hint (lua/dojo/signature.lua).
+      -- blink's window lists raw type-stub overloads (map's _T1@__new__ ...).
       -- ⌘K ⌘I on a name shows its real documentation.
-      signature = { enabled = true, trigger = { enabled = false } },
+      signature = { enabled = false },
     },
   },
   -- Suggestions from the language server, file paths and words in the file.
@@ -97,7 +130,7 @@ return {
     end,
   },
 
-  -- One signature popup (blink's), not two.
+  -- One signature hint (Dojo's), not two.
   {
     "folke/noice.nvim",
     opts = { lsp = { signature = { enabled = false } } },
@@ -139,6 +172,10 @@ return {
       },
     },
     config = function(_, opts)
+      -- Off stays off: the choice (⌘K M, or Settings) is remembered.
+      if require("dojo.settings").get("sound") == false then
+        opts.enabled = false
+      end
       require("sfx").setup(opts)
       Snacks.toggle
         .new({
@@ -148,7 +185,7 @@ return {
             return require("sfx").opts.enabled
           end,
           set = function(enabled)
-            require("sfx").set_enabled(enabled)
+            require("dojo.sfx").set(enabled)
           end,
         })
         :map("<leader>uM")

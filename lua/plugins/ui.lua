@@ -226,10 +226,11 @@ return {
     opts = { notifier = { style = "minimal" } },
   },
 
-  -- Leader-key hints appear only if you pause, not on every keystroke.
+  -- Leader-key hints appear only if you pause, not on every keystroke, and
+  -- never over Code's own sheets (Open Folder, Settings), which have their own keys.
   {
     "folke/which-key.nvim",
-    opts = { delay = 400 },
+    opts = { delay = 400, disable = { ft = { "dojo_browse", "dojo_settings" } } },
   },
 
   -- Disabled: zen-mode and twilight (Snacks.zen covers it).

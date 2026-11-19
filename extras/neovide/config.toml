@@ -1,10 +1,10 @@
-# Neovide settings for Dojo. Symlinked to ~/.config/neovide/config.toml.
+# Neovide settings for the Code app. Symlinked to ~/.config/neovide/config.toml.
 # Fonts live here (not in 'guifont', which would wipe the per-style families).
 # A type error anywhere makes Neovide ignore the whole file — keep strings quoted.
 
 frame = "transparent"          # traffic lights float over the editor, no title strip
 title-hidden = true
-icon = "~/.config/nvim/extras/dojo/Dojo.icns"
+icon = "~/.config/nvim/extras/dojo/Code.icns"
 system-native-tabs = true      # ⌘N windows show as tabs instead of hiding each other
 system-pinned-hotkey = "false" # don't grab ⌘⌃Z system-wide
 

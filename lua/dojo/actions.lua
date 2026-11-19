@@ -145,12 +145,12 @@ function M.reopen_closed()
       return
     end
   end
-  vim.notify("No recently closed files", vim.log.levels.INFO, { title = "Dojo" })
+  vim.notify("No recently closed files", vim.log.levels.INFO, { title = require("dojo").name })
 end
 
 function M.settings()
   normal_mode()
-  Snacks.picker.files({ cwd = vim.fn.stdpath("config"), title = "Settings" })
+  require("dojo.settings").open()
 end
 
 function M.paste_terminal()
@@ -430,7 +430,7 @@ end
 
 function M.toggle_wrap()
   vim.wo.wrap = not vim.wo.wrap
-  vim.notify("Word wrap " .. (vim.wo.wrap and "on" or "off"), vim.log.levels.INFO, { title = "Dojo" })
+  vim.notify("Word wrap " .. (vim.wo.wrap and "on" or "off"), vim.log.levels.INFO, { title = require("dojo").name })
 end
 
 function M.theme()
@@ -440,7 +440,10 @@ end
 
 local function scale(delta)
   if not vim.g.neovide then
-    vim.notify("Zoom works in the Dojo app (Neovide). In a terminal use its own ⌘= / ⌘-.", vim.log.levels.INFO)
+    vim.notify(
+      "Zoom works in the " .. require("dojo").name .. " app (Neovide). In a terminal use its own ⌘= / ⌘-.",
+      vim.log.levels.INFO
+    )
     return
   end
   if delta == 0 then
@@ -448,6 +451,7 @@ local function scale(delta)
   else
     vim.g.neovide_scale_factor = math.max(0.5, math.min(2.5, (vim.g.neovide_scale_factor or 1.0) * delta))
   end
+  require("dojo.settings").set("zoom", vim.g.neovide_scale_factor) -- the same size next launch
 end
 
 function M.zoom_in()

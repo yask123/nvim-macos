@@ -18,6 +18,12 @@ function M.setup()
     end
   end
 
+  -- The text size you left it at (⌘= / ⌘-, or Settings).
+  local zoom = require("dojo.settings").get("zoom")
+  if type(zoom) == "number" and zoom >= 0.5 and zoom <= 2.5 then
+    g.neovide_scale_factor = zoom
+  end
+
   -- Neovide animates scrolling itself; don't stack snacks.scroll on top.
   g.snacks_scroll = false
 

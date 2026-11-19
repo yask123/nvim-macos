@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Opt-in desktop setup for Dojo (safe to re-run):
+# Opt-in desktop setup for the Code app (safe to re-run):
 #   - links extras/neovide/config.toml → ~/.config/neovide/config.toml
 #   - links extras/ghostty/config      → ~/.config/ghostty/config (only if you have none)
-#   - sources extras/zsh/dojo.zsh from ~/.zshrc (`v <path>` opens it in Dojo)
-#   - builds ~/Applications/Dojo.app and links the `dojo` command
+#   - sources extras/zsh/dojo.zsh from ~/.zshrc (`v <path>` opens it in Code)
+#   - builds ~/Applications/Code.app and links the `dojo` command
 # Existing files are never overwritten; the script tells you what it skipped.
 
 set -Eeuo pipefail
@@ -31,7 +31,7 @@ zsh_line='[[ -r ~/.config/nvim/extras/zsh/dojo.zsh ]] && source ~/.config/nvim/e
 if grep -qF "extras/zsh/dojo.zsh" "$HOME/.zshrc" 2>/dev/null; then
   printf '[ok]   ~/.zshrc sources dojo.zsh\n'
 else
-  printf '\n# Dojo (Neovim) shell helpers: v <path> opens it in Dojo\n%s\n' "$zsh_line" >>"$HOME/.zshrc"
+  printf '\n# Code (Neovim) shell helpers: v <path> opens it in Code\n%s\n' "$zsh_line" >>"$HOME/.zshrc"
   printf '[new]  ~/.zshrc now sources dojo.zsh (open a new terminal)\n'
 fi
 

@@ -5,7 +5,7 @@
 local M = {}
 
 M.themes = {
-  { name = "phosphor", label = "Phosphor", note = "dark, neon green (Dojo)" },
+  { name = "phosphor", label = "Phosphor", note = "dark, neon green (" .. require("dojo").name .. ")" },
   { name = "rose-pine", label = "Rosé Pine", note = "light & dark" },
   { name = "catppuccin-nvim", label = "Catppuccin", note = "light & dark" },
   { name = "kanso", label = "Kanso", note = "light & dark" },

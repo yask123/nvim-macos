@@ -21,6 +21,8 @@ local function blend(fg, bg, alpha)
   return out
 end
 
+M.blend = blend
+
 function M.apply()
   local bg = get("Normal", "bg")
   local fg = get("Normal", "fg")

@@ -1,6 +1,7 @@
--- Folder-as-project, VS Code style: ⌘O shows the native macOS folder picker,
--- ⌘⌥O lists recent projects. Opening one saves the current session, switches
--- the working directory, and restores that project's last session if any.
+-- Folder-as-project, VS Code style: ⌘O browses for a folder inside the window
+-- (lua/dojo/browse.lua), ⌘⌥O lists the projects you've had open
+-- (lua/dojo/recent.lua). Opening one saves the current session, switches the
+-- working directory, and restores that project's last session if any.
 
 local M = {}
 
@@ -34,7 +35,7 @@ function M.show_explorer(dir, enter)
 end
 
 local function notify(message, level)
-  vim.notify(message, level or vim.log.levels.INFO, { title = "Dojo" })
+  vim.notify(message, level or vim.log.levels.INFO, { title = require("dojo").name })
 end
 
 local function session_file()
@@ -70,7 +71,8 @@ function M.title()
   local cwd = vim.fn.getcwd()
   local name = cwd ~= vim.env.HOME and vim.fn.fnamemodify(cwd, ":t") or ""
   vim.o.title = true
-  vim.o.titlestring = name ~= "" and (name .. " — Dojo") or "Dojo"
+  local app = require("dojo").name
+  vim.o.titlestring = name ~= "" and (name .. " — " .. app) or app
 end
 
 ---@param dir string
@@ -86,6 +88,7 @@ function M.open(dir, file)
     notify("Not a folder: " .. dir, vim.log.levels.WARN)
     return
   end
+  require("dojo.recent").touch(dir) -- top of Recent Projects from now on
   -- A file inside the project that's already open: just open it, keep everything else.
   local real_file = file and (vim.uv.fs_realpath(file) or file)
   if real_file and (dir == cwd or vim.startswith(real_file, cwd .. "/")) then
@@ -131,36 +134,39 @@ function M.open(dir, file)
 end
 
 function M.choose_folder()
-  local start = vim.fn.getcwd()
-  local script = {
-    "tell me to activate",
-    string.format(
-      'POSIX path of (choose folder with prompt "Open a folder in Dojo" default location POSIX file "%s")',
-      start:gsub('"', '\\"')
-    ),
-  }
-  local cmd = { "osascript" }
-  for _, line in ipairs(script) do
-    vim.list_extend(cmd, { "-e", line })
-  end
-  vim.system(cmd, { text = true }, function(result)
-    later(function()
-      local path = vim.trim(result.stdout or "")
-      if result.code == 0 and path ~= "" then
-        M.open(path)
-      end
-    end)
-  end)
+  require("dojo.browse").open()
 end
 
 function M.recent()
-  local dev = vim.tbl_filter(function(dir)
-    return vim.uv.fs_stat(vim.fn.expand(dir)) ~= nil
-  end, M.dev_dirs)
-  Snacks.picker.projects({
+  local items = {}
+  for _, entry in ipairs(require("dojo.recent").list()) do
+    table.insert(items, { text = entry.name .. " " .. entry.path, file = entry.path, entry = entry })
+  end
+  if #items == 0 then
+    return M.choose_folder() -- nothing opened yet: browse for a folder instead
+  end
+  local name_width = 0
+  for _, item in ipairs(items) do
+    name_width = math.max(name_width, vim.fn.strdisplaywidth(item.entry.name))
+  end
+  local here = vim.uv.fs_realpath(vim.fn.getcwd())
+  Snacks.picker({
     title = "Recent Projects",
-    dev = dev,
+    items = items,
     layout = { preset = "vscode" },
+    -- The first row is the project you're in: start on the one before it,
+    -- so ⌘⌥O ↩ flips between your last two projects.
+    on_show = function(picker)
+      if #items > 1 and items[1].file == here then
+        picker.list:view(2)
+      end
+    end,
+    format = function(item)
+      return {
+        { Snacks.picker.util.align(item.entry.name, name_width + 3) },
+        { item.entry.where, "SnacksPickerComment" },
+      }
+    end,
     confirm = function(picker, item)
       picker:close()
       if item then

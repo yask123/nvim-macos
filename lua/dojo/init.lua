@@ -3,6 +3,11 @@
 
 local M = {}
 
+-- What the app is called on the Mac (scripts/make-app.sh builds Code.app) and
+-- in everything you read: the window title, the welcome screen, messages.
+-- The code keeps its first name, Dojo.
+M.name = "Code"
+
 local function each_entry(fn)
   for _, group in ipairs(require("dojo.keys")) do
     for _, section in ipairs(group.sections) do
@@ -97,6 +102,8 @@ function M.setup()
   require("dojo.polish").setup()
   require("dojo.sfx").setup()
   require("dojo.dim").setup()
+  require("dojo.signature").setup()
+  require("dojo.hold").setup()
 
   local group = vim.api.nvim_create_augroup("Dojo", { clear = true })
   vim.api.nvim_create_autocmd("ColorScheme", {
@@ -162,10 +169,10 @@ function M.setup()
   local command = vim.api.nvim_create_user_command
   command("Dojo", function()
     require("dojo.cheatsheet").open()
-  end, { desc = "Dojo keyboard shortcuts" })
+  end, { desc = M.name .. " keyboard shortcuts" })
   command("DojoPalette", function()
     require("dojo.palette").open()
-  end, { desc = "Dojo command palette" })
+  end, { desc = M.name .. " command palette" })
   command("DojoOpen", function(opts)
     if opts.args == "" then
       require("dojo.project").choose_folder()

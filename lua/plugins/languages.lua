@@ -25,7 +25,7 @@ local function auto_install()
         return
       end
       pending[lang] = true
-      vim.notify("Installing " .. lang .. " support…", vim.log.levels.INFO, { title = "Dojo" })
+      vim.notify("Installing " .. lang .. " support…", vim.log.levels.INFO, { title = require("dojo").name })
       ts.install({ lang }, { summary = false }):await(function(err)
         vim.schedule(function()
           if err or vim.v.exiting ~= vim.NIL then

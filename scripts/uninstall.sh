@@ -54,12 +54,14 @@ if [[ -f "$updater" ]] && grep -q "restore-plugins.sh" "$updater"; then
   rm -f -- "$updater"
   printf 'Removed %s\n' "$updater"
 fi
-app="$user_home/Applications/Dojo.app"
-if [[ -d "$app" && -x /usr/libexec/PlistBuddy ]] &&
-  [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" == dev.dojo.* ]]; then
-  rm -rf -- "$app"
-  printf 'Removed %s\n' "$app"
-fi
+# The app (Code; Dojo before the rename), only if this setup built it.
+for app in "$user_home/Applications/Code.app" "$user_home/Applications/Dojo.app"; do
+  if [[ -d "$app" && -x /usr/libexec/PlistBuddy ]] &&
+    [[ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Contents/Info.plist" 2>/dev/null)" == dev.dojo.* ]]; then
+    rm -rf -- "$app"
+    printf 'Removed %s\n' "$app"
+  fi
+done
 
 move_path "$target_config" config
 move_path "$target_data" data

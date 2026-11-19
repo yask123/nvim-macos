@@ -66,5 +66,5 @@ vim.opt.autoread = true
 -- Show matching brackets
 vim.opt.showmatch = true
 
--- Neovide (the Dojo app): motion, padding, window chrome.
+-- Neovide (the Code app): motion, padding, window chrome.
 require("dojo.gui").setup()

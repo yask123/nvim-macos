@@ -1,27 +1,30 @@
 #!/usr/bin/env bash
-# dojo — open Neovim (Neovide) like a GUI editor.
+# dojo — open Neovim (the Code app) like a GUI editor.
 #
-#   dojo                open the Dojo dashboard (or bring the window forward)
+#   dojo                open the dashboard (or bring the window forward)
 #   dojo <folder>       open that folder as the project (restores its session)
 #   dojo <file>         open a file, with its git repo (or folder) as the project
 #
-# If Dojo is already running, the folder opens in the existing window (like
-# VS Code's Open Folder) through the socket Dojo serves. Otherwise Neovide
+# If the app is already running, the folder opens in the existing window (like
+# VS Code's Open Folder) through the socket it serves. Otherwise Neovide
 # starts centred on the screen under the mouse at a calm ~3:2 proportion.
 # Neovide has no position flag, so the geometry is written to its settings
 # file just before a cold start (points × backing scale, top-left origin).
 
 set -Eeuo pipefail
 
-# The Dojo app (a renamed Neovide, see make-app.sh), or plain Neovide.
+# The Code app (a renamed Neovide, see make-app.sh; called Dojo before
+# November 2026), or plain Neovide.
 if [[ -n "${DOJO_NEOVIDE_APP:-}" ]]; then
   neovide_app="$DOJO_NEOVIDE_APP"
+elif [[ -x "$HOME/Applications/Code.app/Contents/MacOS/Code" ]]; then
+  neovide_app="$HOME/Applications/Code.app"
 elif [[ -x "$HOME/Applications/Dojo.app/Contents/MacOS/Dojo" ]]; then
   neovide_app="$HOME/Applications/Dojo.app"
 else
   neovide_app="/Applications/Neovide.app"
 fi
-neovide_bin="$neovide_app/Contents/MacOS/Dojo"
+neovide_bin="$neovide_app/Contents/MacOS/$(basename -- "$neovide_app" .app)"
 [[ -x "$neovide_bin" ]] || neovide_bin="$neovide_app/Contents/MacOS/neovide"
 process_name="$(basename -- "$neovide_bin")"
 settings="$HOME/Library/Application Support/neovide/neovide-settings.json"
@@ -63,7 +66,7 @@ vim_quote() {
   printf "'%s'" "$s"
 }
 
-# 1. Dojo is running: switch its window to the folder (and file), then focus it.
+# 1. The app is running: switch its window to the folder (and file), then focus it.
 if [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remote-expr 1 >/dev/null 2>&1; then
   if [[ -n "$dir" ]]; then
     args="[$(vim_quote "$dir")"
@@ -75,7 +78,7 @@ if [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remo
   exit 0
 fi
 
-# 2. Neovide is running without Dojo's socket: give the folder its own window.
+# 2. Neovide is running without the app's socket: give the folder its own window.
 if pgrep -xq "$process_name"; then
   if [[ -z "$dir" ]]; then
     open -a "$neovide_app"

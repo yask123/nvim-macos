@@ -47,4 +47,4 @@ keybind = super+]=unbind
 
 # ⌘← / ⌘→ / ⌘⌫ keep Ghostty's defaults (Ctrl-A / Ctrl-E / Ctrl-U) so every
 # terminal program understands them. Inside nvim in a terminal use Home / End
-# (or ^ / $); in the Dojo app these Cmd keys work natively.
+# (or ^ / $); in the Code app these Cmd keys work natively.
