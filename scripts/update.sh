@@ -95,11 +95,13 @@ NVIM_DOCTOR=1 NVIM_MASON_AUTO_INSTALL=0 "$config_dir/scripts/restore-plugins.sh"
   "+Lazy! load mason.nvim" \
   "+lua dofile(vim.fn.stdpath('config') .. '/scripts/bootstrap.lua')"
 
-# Rebuild the Dojo app so a newer Neovide or a new icon is picked up.
-if [[ -d "$HOME/Applications/Dojo.app" && -d /Applications/Neovide.app ]]; then
-  "$config_dir/scripts/make-app.sh" >/dev/null || printf 'Could not rebuild Dojo.app (scripts/make-app.sh)\n' >&2
+# Rebuild the Code app so a newer Neovide or a new icon is picked up (this
+# also turns a Dojo.app from before the rename into Code.app).
+if [[ (-d "$HOME/Applications/Code.app" || -d "$HOME/Applications/Dojo.app") && -d /Applications/Neovide.app ]]; then
+  "$config_dir/scripts/make-app.sh" >/dev/null || printf 'Could not rebuild Code.app (scripts/make-app.sh)\n' >&2
 fi
 
-"$config_dir/scripts/doctor.sh"
+# The health check prints only what needs attention.
+"$config_dir/scripts/doctor.sh" --quiet
 
-printf '\nNeovim is up to date. Restart it to load the new config.\n'
+printf '\nCode is up to date. Restart it to load the new version.\n'

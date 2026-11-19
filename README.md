@@ -3,19 +3,25 @@
 My reproducible Neovim setup for macOS, based on
 [LazyVim](https://www.lazyvim.org/) with every plugin commit locked.
 
-It includes **Dojo**: Neovim as a quiet desktop editor. You open it like
+It includes **Code**: Neovim as a quiet desktop editor. You open it like
 Sublime Text or VS Code, it uses the Cmd shortcuts you already know, and it
 stays out of the way: no sidebars you didn't ask for, no badges, no chatter.
+(The app was called Dojo until November 2026. The `dojo` command and the code
+keep that name: `code` in a terminal already belongs to VS Code.)
 
-## Dojo in one minute
+## Code in one minute
 
-- **Open it** from Spotlight ("Dojo"), the Dock, or a terminal. `dojo ~/code/app`
+- **Open it** from Spotlight ("Code"), the Dock, or a terminal. `dojo ~/code/app`
   (or `v .` in zsh) opens a folder as the project. You can also drop a folder
-  onto the Dojo icon.
+  onto the Code icon.
 - **The window opens centred** on the screen under your mouse, and the desktop
   behind it dims while you work (⌘K D turns that off).
-- **Open a folder** with ⌘O, the native macOS picker, or ⌘⌥O for recent
-  projects. Each project reopens where you left it.
+- **Open a folder** with ⌘O: a two-column browser inside the window (`h j k l`
+  or the arrows, `/` to find, Enter opens). The welcome screen lists your
+  recent projects (press 1-9), and ⌘⌥O does the same from anywhere. Each
+  project reopens where you left it.
+- **Settings** (⌘,) is one small sheet: theme, text size, typing sounds,
+  desktop dimming. The config files are a row below, for tinkering.
 - **See the shortcuts** with ⌘K ⌘S (or `Space ?`): five short pages, including
   one with the Vim basics. ⌘⇧P searches every action.
 
@@ -44,7 +50,7 @@ Neovide's own menu keeps ⌘N (new window), ⌘H, ⌘M, ⌘Q and ⌃⌘F.
 - **Quiet chrome:** plain tabs, a one-line status bar in the editor's own
   background (file · line and column · language · branch), one tone for file
   icons, no gutter marks, no progress spinners, an instant cursor.
-- **Focus:** while Dojo is the active app, a click-through veil dims the rest
+- **Focus:** while Code is the active app, a click-through veil dims the rest
   of the screen. A tiny Swift helper (`extras/dojo/dim.swift`) draws it; it
   builds itself on first launch with `swiftc`.
 - **Wide screens:** long lines soft-wrap with their indent kept; nothing
@@ -60,41 +66,57 @@ in `nvim` inside Ghostty. The exceptions are ⌘F, ⌘D, ⌘W, ⌘T and ⌘N, wh
 Ghostty's own; use `/` to search. Don't run nvim inside tmux if you want Cmd
 keys.
 
-## Install on a fresh Mac
+## Install
 
-With Homebrew:
-
-```bash
-brew install yask123/dojo/dojo
-```
-
-Or without Homebrew (the script installs it):
+One command, on any Mac running macOS 13 or newer:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/yask123/nvim-macos/main/install.sh)"
+bash -c "$(curl -fsSL https://yask.dev/code/install)"
 ```
 
-If Neovide or the Monaspice font is already installed by hand, let Homebrew
-adopt it first: `brew install --cask --adopt neovide-app font-monaspice-nerd-font`.
+Or with Homebrew:
 
-The first run may ask for Apple Command Line Tools or Homebrew permissions.
-Rerun the same command after completing an Apple system prompt. When it
-finishes, open **Dojo** from Spotlight.
+```bash
+brew install yask123/tap/code
+```
 
-The installer:
+When it finishes, open **Code** from Spotlight.
 
-- installs Neovim, Neovide, Git, search tools, Node, Python, Lua, and the fonts;
-- moves any existing Neovim config, plugins, state, and cache to a timestamped
-  unique backup under `~/.local/state/nvim-bootstrap/backups/`;
+The installer checks the Mac first (macOS version, disk space, the network,
+Apple's Command Line Tools) and stops with a plain reason if something is in
+the way. Then it:
+
+- installs Homebrew if it is missing, and with it Neovim, Git, the search
+  tools, Node, Python, Lua, Neovide and the Monaspace font (a font or Neovide
+  you installed by hand is left as it is; nothing you already have is upgraded);
 - clones this repository to `~/.config/nvim`;
-- restores the exact plugin commits in `lazy-lock.json`;
-- installs the configured LSP servers and formatters through Mason;
-- links the Neovide and Ghostty configs (never overwriting existing ones),
-  adds the zsh helpers, and builds `~/Applications/Dojo.app`;
+- restores the exact plugin commits in `lazy-lock.json`, and installs the
+  language servers and formatters through Mason;
+- links the Neovide config (and the Ghostty one, if you use Ghostty), adds the
+  zsh helpers, and builds `~/Applications/Code.app`;
 - installs `nvim-update` in `~/.local/bin` for safe future updates;
-- runs a non-destructive doctor at the end.
+- runs a health check (`scripts/doctor.sh`) and tells you only what needs
+  attention.
 
-It does not copy credentials, sessions, undo history, or terminal preferences.
+Each step is one line; everything the tools print goes to
+`~/Library/Logs/code-install.log`. If a step fails you see the end of that log
+and can run the same command again.
+
+### Upgrading, and what happens to what you had
+
+Run the same command.
+
+- **An earlier Code, or Dojo (its first name):** upgraded in place. The old
+  `Dojo.app` and its Homebrew entry are removed, `Code.app` takes their place,
+  and your sessions, recent projects, theme and settings stay. The previous
+  config folder is set aside under `~/.local/state/nvim-bootstrap/replaced/`
+  in case you had edited it. If Code is open, the installer offers to quit it.
+- **Some other Neovim setup:** its config, plugins, state and cache move to a
+  timestamped backup under `~/.local/state/nvim-bootstrap/backups/`. Nothing
+  is deleted.
+
+`--fresh` starts clean even over an earlier install (everything moves to the
+backup). Day to day, `nvim-update` is the lighter way to get a new version.
 
 ### Inspect before running
 
@@ -111,14 +133,12 @@ makes the inspected route match what gets installed.
 Useful installer switches:
 
 ```bash
-./install.sh --skip-brew      # Brewfile dependencies and fonts already exist
+./install.sh --no-app         # terminal only: skip the Code app
+./install.sh --no-open        # don't open Code when it finishes
+./install.sh --yes            # don't ask before quitting a running Code
+./install.sh --skip-brew      # the tools and fonts are already installed
 ./install.sh --skip-plugins   # clone only; install plugins on first launch
-./install.sh --no-app         # terminal only: skip the Dojo app setup
 ```
-
-Re-running the installer is safe: the current Neovim directories are moved to
-a unique backup before a clean copy is installed. Existing shared Homebrew
-packages are not upgraded during the bootstrap.
 
 ## What is configured
 
@@ -127,6 +147,9 @@ packages are not upgraded during the bootstrap.
 - JSON, Lua and Swift (Xcode's sourcekit-lsp) language support; other
   languages install their syntax support the first time you open such a file
 - Blink completion (Tab or Enter accepts), Snacks picker and explorer, Lazygit
+- a one-line hint of what a call takes while you type it, the argument you
+  are on lit up (⌃K lists every way to call it)
+- hold `h` `j` `k` `l` and the cursor picks up speed; taps and counts stay exact
 - folds that open big files as an outline
 - debounced auto-save for normal named files only
 - quiet diagnostics: errors only, no inline text
@@ -134,7 +157,7 @@ packages are not upgraded during the bootstrap.
 ### Main custom keys
 
 Leader is the space bar. The full, searchable list is in the app itself
-(⌘K ⌘S or `Space ?`); these are the extra keys from before Dojo:
+(⌘K ⌘S or `Space ?`); these are the extra keys from before the app:
 
 | Key | Action |
 | --- | --- |
@@ -157,16 +180,16 @@ and Rust runners additionally require `go` and `cargo`.
 ## Check or develop the setup
 
 ```bash
-~/.config/nvim/scripts/doctor.sh
-~/.config/nvim/scripts/doctor.sh --strict  # include optional tools
+~/.config/nvim/scripts/doctor.sh           # the health check, in full
+~/.config/nvim/scripts/doctor.sh --strict  # warnings count as failures
 make format-check
 make test
 ```
 
 `make test` creates isolated temporary XDG directories, restores the pinned
 plugins there, checks the runner and Ruff behavior, and verifies that the test
-did not mutate the source repository. It also exercises backup-first install
-and recoverable uninstall behavior in a temporary home directory.
+did not mutate the source repository. It also exercises backup-first install,
+the in-place upgrade and recoverable uninstall in a temporary home directory.
 
 To apply repository changes on this or another installed Mac without replacing
 local state, quit Neovim and run:
@@ -203,10 +226,11 @@ maintainable than committing machine binaries or personal authentication.
 The uninstall is recoverable and does not remove shared Homebrew packages:
 
 ```bash
-~/.config/nvim/scripts/uninstall.sh
+brew uninstall --cask code              # if you installed with Homebrew
+~/.config/nvim/scripts/uninstall.sh     # otherwise
 ```
 
-It moves the four Neovim directories to
+It removes `Code.app` and moves the four Neovim directories to
 `~/.local/state/nvim-bootstrap/uninstalled/<timestamp>.<unique>/`. Installer
 backups use the same `config`, `data`, `state`, and `cache` labels, so individual
 directories can be moved back to their original XDG locations if needed.

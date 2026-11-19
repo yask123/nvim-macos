@@ -2,24 +2,33 @@
 
 set -uo pipefail
 
+# Health check for Code: the tools it needs, the config, the plugins, the app.
+# Changes nothing. The installer and nvim-update run it with --quiet.
+
 failures=0
 warnings=0
 skip_plugins=0
 strict=0
+quiet=0
+with_app=1
 user_home="${HOME:?HOME is not set}"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/doctor.sh [--skip-plugins] [--strict]
+Usage: ./scripts/doctor.sh [--skip-plugins] [--no-app] [--quiet] [--strict]
 
   --skip-plugins  Check only the system dependencies and config files.
-  --strict        Treat optional-tool warnings as failures.
+  --no-app        Skip the Code.app checks (a Neovim-only install).
+  --quiet         Print only what needs attention.
+  --strict        Treat warnings as failures.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-plugins) skip_plugins=1 ;;
+    --no-app) with_app=0 ;;
+    --quiet) quiet=1 ;;
     --strict) strict=1 ;;
     -h | --help)
       usage
@@ -34,13 +43,24 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-ok() { printf '[ok]   %s\n' "$1"; }
+neon="" dim="" amber="" red="" off=""
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
+  neon=$'\033[38;5;84m' dim=$'\033[2m' amber=$'\033[38;5;215m' red=$'\033[38;5;203m' off=$'\033[0m'
+fi
+
+ok() {
+  [[ $quiet -eq 1 ]] || printf '  %s✓%s %s\n' "$neon" "$off" "$1"
+}
+# Something optional that isn't there: worth a line, never a worry.
+skipped() {
+  [[ $quiet -eq 1 ]] || printf '  %s· %s%s\n' "$dim" "$1" "$off"
+}
 fail() {
-  printf '[fail] %s\n' "$1" >&2
+  printf '  %s✗%s %s\n' "$red" "$off" "$1" >&2
   failures=$((failures + 1))
 }
 warn() {
-  printf '[warn] %s\n' "$1"
+  printf '  %s!%s %s\n' "$amber" "$off" "$1"
   warnings=$((warnings + 1))
 }
 
@@ -103,32 +123,36 @@ fi
 config_home="${XDG_CONFIG_HOME:-$user_home/.config}"
 config_dir="$config_home/nvim"
 
-# Neovide (the Dojo app) starts Neovim through a login shell.
+# Neovide (the Code app) starts Neovim through a login shell.
 if [[ "$(uname -s)" == Darwin ]]; then
   if env -i HOME="$user_home" /bin/zsh -lc 'command -v nvim' >/dev/null 2>&1; then
-    ok "login shell finds nvim (the Dojo app can start Neovim)"
+    ok "login shell finds nvim (the Code app can start Neovim)"
   else
     warn "a login shell can't find nvim; add Homebrew to ~/.zprofile: echo 'eval \"\$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile"
   fi
 fi
 
-# Dojo desktop pieces are optional: scripts/setup-dojo.sh installs them.
-if [[ -d /Applications/Neovide.app ]]; then
-  ok "Neovide app"
-else
-  warn "Neovide is not installed (brew install --cask neovide-app)"
-fi
-if [[ -x "$user_home/Applications/Dojo.app/Contents/MacOS/Dojo" ]]; then
-  ok "Dojo.app"
-elif [[ -d "$user_home/Applications/Dojo.app" ]]; then
-  warn "Dojo.app is the old launcher; run scripts/make-app.sh for the full app"
-else
-  warn "Dojo.app is missing; run scripts/setup-dojo.sh"
-fi
-if [[ -e "$config_home/neovide/config.toml" ]]; then
-  ok "Neovide config"
-else
-  warn "Neovide config is not linked; run scripts/setup-dojo.sh"
+# The desktop pieces: scripts/setup-dojo.sh installs them.
+if [[ $with_app -eq 1 ]]; then
+  apps_dir="${DOJO_APP_DIR:-$user_home/Applications}"
+  if [[ -d "${DOJO_NEOVIDE_APP:-/Applications/Neovide.app}" ]]; then
+    ok "Neovide app"
+  else
+    warn "Neovide is not installed (brew install --cask neovide-app)"
+  fi
+  if [[ -x "$apps_dir/Code.app/Contents/MacOS/Code" ]]; then
+    ok "Code.app"
+  else
+    warn "Code.app is missing; run scripts/setup-dojo.sh"
+  fi
+  if [[ -d "$apps_dir/Dojo.app" ]]; then
+    warn "Dojo.app (the app's old name) is still there; quit it, then run scripts/make-app.sh to remove it"
+  fi
+  if [[ -e "$config_home/neovide/config.toml" ]]; then
+    ok "Neovide config"
+  else
+    warn "Neovide config is not linked; run scripts/setup-dojo.sh"
+  fi
 fi
 
 if [[ -f "$config_dir/init.lua" && -f "$config_dir/lazy-lock.json" ]]; then
@@ -181,11 +205,17 @@ for optional_command in go cargo; do
   if command -v "$optional_command" >/dev/null 2>&1; then
     ok "$optional_command (optional)"
   else
-    warn "$optional_command is optional and not installed"
+    skipped "$optional_command is not installed (optional: only for Go and Rust projects)"
   fi
 done
 
-printf '\nDoctor finished: %d failure(s), %d warning(s).\n' "$failures" "$warnings"
+if [[ $quiet -eq 0 ]]; then
+  if [[ $failures -eq 0 && $warnings -eq 0 ]]; then
+    printf '\n  Everything is in place.\n'
+  else
+    printf '\n  %d problem(s), %d warning(s).\n' "$failures" "$warnings"
+  fi
+fi
 if [[ $failures -gt 0 || ($strict -eq 1 && $warnings -gt 0) ]]; then
   exit 1
 fi

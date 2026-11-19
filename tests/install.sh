@@ -44,7 +44,10 @@ printf 'cache\n' >"$XDG_CACHE_HOME/nvim/sentinel"
 printf 'keep\n' >"$HOME/Documents/Folio/keep.txt"
 printf 'keep\n' >"$HOME/.vim/keep.txt"
 
-"$repo_root/install.sh" --skip-brew --skip-plugins --no-app
+first_run="$("$repo_root/install.sh" --skip-brew --skip-plugins --no-app)"
+# Someone else's Neovim setup: said so, and moved to a backup.
+grep -q "Found another Neovim setup" <<<"$first_run"
+grep -q "Neovim is ready" <<<"$first_run"
 
 [[ -f "$XDG_CONFIG_HOME/nvim/init.lua" ]]
 [[ -x "$HOME/.local/bin/nvim-update" ]]
@@ -57,6 +60,31 @@ for label in config data state cache; do
   [[ -f "$backup_root/$label/sentinel" ]]
 done
 
+# Running it again is an upgrade: the config is replaced (the old one set
+# aside), and sessions, recent projects and settings stay where they are.
+mkdir -p "$XDG_STATE_HOME/nvim" "$XDG_DATA_HOME/nvim"
+printf 'mine\n' >"$XDG_STATE_HOME/nvim/dojo-projects.json"
+printf 'plugins\n' >"$XDG_DATA_HOME/nvim/keep"
+printf 'edited\n' >"$XDG_CONFIG_HOME/nvim/local-edit"
+second_run="$("$repo_root/install.sh" --skip-brew --skip-plugins --no-app)"
+grep -q "Found an earlier install" <<<"$second_run"
+[[ "$(cat "$XDG_STATE_HOME/nvim/dojo-projects.json")" == "mine" ]]
+[[ -f "$XDG_DATA_HOME/nvim/keep" ]]
+[[ ! -e "$XDG_CONFIG_HOME/nvim/local-edit" ]]
+replaced_root="$(find "$XDG_STATE_HOME/nvim-bootstrap/replaced" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+[[ -f "$replaced_root/config/local-edit" ]]
+[[ ! -e "$replaced_root/state" ]]
+
+# --fresh starts clean even over an earlier install.
+"$repo_root/install.sh" --skip-brew --skip-plugins --no-app --fresh >/dev/null
+[[ ! -e "$XDG_STATE_HOME/nvim/dojo-projects.json" ]]
+
+# A Mac too old for the app, or an option that doesn't exist, stops early.
+if "$repo_root/install.sh" --no-such-option >/dev/null 2>&1; then
+  printf 'An unknown option should fail\n' >&2
+  exit 1
+fi
+
 "$XDG_CONFIG_HOME/nvim/scripts/uninstall.sh"
 
 [[ ! -e "$XDG_CONFIG_HOME/nvim" ]]
@@ -66,4 +94,4 @@ done
 uninstalled_root="$(find "$XDG_STATE_HOME/nvim-bootstrap/uninstalled" -mindepth 1 -maxdepth 1 -type d -print -quit)"
 [[ -f "$uninstalled_root/config/init.lua" ]]
 
-printf 'Installer backup and uninstall test passed\n'
+printf 'Installer backup, upgrade and uninstall test passed\n'

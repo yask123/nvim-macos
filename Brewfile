@@ -15,4 +15,3 @@ brew "lua"
 
 cask "font-monaspice-nerd-font"
 cask "neovide-app"
-cask "ghostty"
