@@ -44,6 +44,18 @@ until nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/dojo.lua
   printf 'Neovim crashed (exit %d); running the editor test again (%d of 3)\n' "$status" "$attempt" >&2
 done
 printf '\n'
+# The Mac-editor layer and the pull request review (same crash, same retry).
+attempt=1
+until nvim --headless -u "$test_config/init.lua" -l "$test_config/tests/parity.lua"; do
+  status=$?
+  if [[ $status -lt 128 || $attempt -ge 3 ]]; then
+    exit "$status"
+  fi
+  attempt=$((attempt + 1))
+  printf 'Neovim crashed (exit %d); running the parity test again (%d of 3)\n' "$status" "$attempt" >&2
+done
+# The `code` command, against a running editor.
+"$test_config/tests/cli.sh" "$test_config"
 
 if ! cmp -s "$repo_root/lazy-lock.json" "$test_config/lazy-lock.json"; then
   printf 'Fresh restore changed lazy-lock.json:\n' >&2

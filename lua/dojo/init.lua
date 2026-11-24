@@ -41,13 +41,20 @@ local function map_entry(entry)
       for mode, rhs in pairs(entry.map) do
         vim.keymap.set(mode, lhs, rhs, opts)
       end
+      -- A Mac-style selection (Select mode, lua/dojo/mac.lua) takes the same
+      -- chords as a Vim one: flip to Visual, run it, and flip back if the
+      -- selection is still there afterwards.
+      local visual = entry.map.x
+      if type(visual) == "string" and entry.map.s == nil then
+        vim.keymap.set("s", lhs, "<C-g>" .. visual .. (visual:match("gv$") and "<C-g>" or ""), opts)
+      end
     elseif entry.run then
       -- Cmd and F-key chords work in every mode: an unmapped <D-…> would be
       -- typed into the file (insert) or sent to the program (terminal).
       local modes = entry.mode or { "n" }
       modes = type(modes) == "string" and { modes } or vim.deepcopy(modes)
       if lhs:match("^<[DF]") or lhs:match("^<S%-F") then
-        for _, mode in ipairs({ "n", "i", "x", "t" }) do
+        for _, mode in ipairs({ "n", "i", "x", "s", "t" }) do
           if not vim.tbl_contains(modes, mode) then
             table.insert(modes, mode)
           end
@@ -95,6 +102,12 @@ function M.setup()
   M._setup = true
 
   M.map_keys()
+  require("dojo.mac").setup() -- Shift+arrows, the mouse and ⌘A select the Mac way
+  require("dojo.mac").swallow_unbound() -- a ⌘ chord nothing is bound to does nothing
+  require("dojo.exit").setup() -- quitting never asks, untitled pages come back
+  require("dojo.disk").setup() -- files changed on disk show up straight away
+  require("dojo.menu").setup() -- right-click
+  require("dojo.lang").setup() -- a language's code help installs when you first open it
   require("dojo.cheatsheet").highlights()
   require("dojo.project").title()
   require("dojo.writing").setup()
@@ -155,13 +168,24 @@ function M.setup()
     })
     -- Started with a folder (dropped on the icon while Dojo was closed).
     local arg = vim.fn.argc() == 1 and vim.fn.fnamemodify(vim.fn.argv(0), ":p"):gsub("/$", "") or nil
-    if arg and vim.fn.isdirectory(arg) == 1 then
+    if vim.env.DOJO_REQUEST and vim.env.DOJO_REQUEST ~= "" then
+      -- Started by the `code` command with files, lines or a wait (lua/dojo/cli.lua).
+      require("dojo.project").later(function()
+        if not require("dojo.cli").startup() and cwd ~= vim.env.HOME and cwd ~= "/" then
+          require("dojo.project").open(cwd)
+        end
+      end)
+    elseif arg and vim.fn.isdirectory(arg) == 1 then
       require("dojo.project").later(function()
         require("dojo.project").open(arg)
       end)
     elseif vim.fn.argc() == 0 and cwd ~= vim.env.HOME and cwd ~= "/" then
       require("dojo.project").later(function()
         require("dojo.project").open(cwd)
+      end)
+    else
+      require("dojo.project").later(function()
+        require("dojo.exit").restore() -- untitled pages left open last time
       end)
     end
   end
@@ -173,6 +197,13 @@ function M.setup()
   command("DojoPalette", function()
     require("dojo.palette").open()
   end, { desc = M.name .. " command palette" })
+  command("Review", function(opts)
+    if opts.args == "" then
+      require("dojo.review").pick()
+    else
+      require("dojo.review").open(opts.args)
+    end
+  end, { desc = "Review a pull request (a number or a link)", nargs = "?" })
   command("DojoOpen", function(opts)
     if opts.args == "" then
       require("dojo.project").choose_folder()

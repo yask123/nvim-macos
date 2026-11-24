@@ -86,27 +86,92 @@ function M.command_for(file, filetype)
   end
 
   local cwd = vim.fs.dirname(file)
+  local name = vim.fs.basename(file)
   if filetype == "python" then
+    -- A project's own environment first (.venv, venv), then python3.
+    local root = vim.fs.root(file, { ".venv", "venv", "pyproject.toml", ".git" })
+    for _, venv in ipairs({ ".venv", "venv" }) do
+      local python = root and (root .. "/" .. venv .. "/bin/python")
+      if python and vim.uv.fs_stat(python) then
+        return { python, file }, cwd
+      end
+    end
     return { "python3", file }, cwd
   elseif filetype == "javascript" or filetype == "javascriptreact" then
     return { "node", file }, cwd
   elseif filetype == "typescript" or filetype == "typescriptreact" then
     return { "npx", "--yes", "tsx@4.19.3", file }, cwd
   elseif filetype == "lua" then
-    return { "lua", file }, cwd
-  elseif filetype == "sh" then
+    return { vim.fn.executable("lua") == 1 and "lua" or "luajit", file }, cwd
+  elseif filetype == "sh" or filetype == "bash" then
     return { "bash", file }, cwd
+  elseif filetype == "zsh" then
+    return { "zsh", file }, cwd
+  elseif filetype == "ruby" then
+    -- In a Rails app (or any app with a Gemfile) a test runs as a test, and
+    -- everything runs with the app's own gems.
+    local root = vim.fs.root(file, "Gemfile")
+    local relative = root and file:sub(#root + 2) or file
+    if root and name:match("_spec%.rb$") then
+      return { "bundle", "exec", "rspec", relative }, root
+    elseif root and name:match("_test%.rb$") then
+      if vim.uv.fs_stat(root .. "/bin/rails") then
+        return { "bin/rails", "test", relative }, root
+      end
+      return { "bundle", "exec", "ruby", "-Itest", relative }, root
+    elseif root and vim.uv.fs_stat(root .. "/bin/rails") and vim.uv.fs_stat(root .. "/config/application.rb") then
+      return { "bin/rails", "runner", relative }, root
+    elseif root then
+      return { "bundle", "exec", "ruby", relative }, root
+    end
+    return { "ruby", file }, cwd
   elseif filetype == "go" then
+    if name:match("_test%.go$") then
+      return { "go", "test", "./..." }, cwd
+    end
     return { "go", "run", file }, cwd
   elseif filetype == "rust" then
     local root = vim.fs.root(file, "Cargo.toml")
     if not root then
-      return nil, nil, "Rust runner needs a Cargo.toml project"
+      return nil, nil, "Rust needs a Cargo project to run (cargo new)"
     end
     return { "cargo", "run" }, root
+  elseif filetype == "swift" then
+    local root = vim.fs.root(file, "Package.swift")
+    if root then
+      return { "swift", "run" }, root
+    end
+    return { "swift", file }, cwd
+  elseif filetype == "c" or filetype == "cpp" then
+    -- Build next to the temp files, run, and leave nothing behind.
+    local compiler = filetype == "c" and "cc" or "c++"
+    local standard = filetype == "c" and "-std=c17" or "-std=c++20"
+    local out = vim.fn.tempname()
+    return {
+      "sh",
+      "-c",
+      ('%s %s -o "$1" "$2" && "$1"; code=$?; rm -f "$1"; exit $code'):format(compiler, standard),
+      "run",
+      out,
+      file,
+    },
+      cwd
+  elseif filetype == "java" then
+    return { "java", file }, cwd -- single-file programs, Java 11+
+  elseif filetype == "php" then
+    return { "php", file }, cwd
+  elseif filetype == "perl" then
+    return { "perl", file }, cwd
+  elseif filetype == "elixir" then
+    return { "elixir", file }, cwd
+  elseif filetype == "zig" then
+    return { "zig", "run", file }, cwd
+  elseif filetype == "html" then
+    return { "open", file }, cwd -- in your browser
   end
 
-  return nil, nil, "No run command for filetype: " .. filetype
+  local label = filetype ~= "" and filetype or "this kind of file"
+  return nil, nil, "⌘R doesn't know how to run " .. label .. " yet"
 end
 
 local function finished(job, code, name, source)
@@ -144,8 +209,12 @@ function M.run()
     vim.notify(err, vim.log.levels.WARN, { title = "Run" })
     return
   end
-  if vim.fn.executable(command[1]) ~= 1 then
-    vim.notify("Runner executable not found: " .. command[1], vim.log.levels.ERROR, { title = "Run" })
+  if not command[1]:find("/") and vim.fn.executable(command[1]) ~= 1 then
+    vim.notify(
+      ("%s isn't installed, so this can't run yet (brew install %s)"):format(command[1], command[1]),
+      vim.log.levels.WARN,
+      { title = "Run" }
+    )
     return
   end
   vim.api.nvim_buf_call(buf, function()

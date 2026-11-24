@@ -7,7 +7,12 @@ local function assert_equal(actual, expected, label)
 end
 
 local function run()
-  vim.o.columns, vim.o.lines = 180, 50
+  -- The screen stays at Neovim's own 80 x 24. Changing 'columns' or 'lines'
+  -- with no UI attached makes Neovim 0.12 write past the end of a grid it
+  -- allocated for 80 columns (seen with Guard Malloc: "header trashed by a
+  -- buffer overrun", freed in grid_alloc), and the damaged heap then crashes
+  -- somewhere unrelated a moment later. That was this test's "now and then
+  -- crashes on its own".
   vim.api.nvim_exec_autocmds("User", { pattern = "VeryLazy" })
   vim.wait(200)
 

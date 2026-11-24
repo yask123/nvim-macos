@@ -13,11 +13,13 @@ local function normal_mode()
   end
 end
 
+-- The selected text, whether it was selected the Vim way or the Mac way.
 local function visual_text()
   local mode = vim.fn.mode()
-  if not mode:match("^[vV\22]") then
+  if not mode:match("^[vV\22sS\19]") then
     return nil
   end
+  mode = ({ s = "v", S = "V", ["\19"] = "\22" })[mode] or mode
   local lines = vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = mode })
   return table.concat(lines, "\n")
 end
@@ -60,15 +62,53 @@ end
 
 -- Essentials --------------------------------------------------------------
 
+-- ⌘P takes the same first characters as VS Code's: > runs a command,
+-- @ lists this file's symbols, # searches every symbol in the project and
+-- : goes to a line. They count only as the very first thing typed.
+local function quick_open_prefixes()
+  local jump = {
+    [">"] = function()
+      M.palette()
+    end,
+    ["@"] = function()
+      M.symbols()
+    end,
+    ["#"] = function()
+      M.workspace_symbols()
+    end,
+    [":"] = function()
+      vim.api.nvim_feedkeys(":", "n", false)
+    end,
+  }
+  local actions, keys = {}, {}
+  for char, go in pairs(jump) do
+    local name = "dojo_prefix_" .. char:byte()
+    actions[name] = function(picker)
+      if picker.input:get() == "" then
+        picker:close()
+        vim.schedule(go)
+      else
+        vim.api.nvim_feedkeys(char, "n", false)
+      end
+    end
+    keys[char] = { name, mode = "i" }
+  end
+  return actions, keys
+end
+
 function M.find_file()
   normal_mode()
+  local actions, keys = quick_open_prefixes()
+  local opts = { layout = { preset = "vscode" }, actions = actions, win = { input = { keys = keys } } }
   -- Outside a project (your home folder) scanning every file is slow and
   -- noisy, so offer recent files instead; ⌘O opens a project.
   if vim.fn.getcwd() == vim.env.HOME then
-    Snacks.picker.recent({ layout = { preset = "vscode" }, title = "Recent Files — ⌘O opens a folder" })
+    opts.title = "Recent Files — ⌘O opens a folder"
+    Snacks.picker.recent(opts)
     return
   end
-  Snacks.picker.smart({ layout = { preset = "vscode" }, title = "Go to File" })
+  opts.title = "Go to File   > command   @ symbol   # in project   : line"
+  Snacks.picker.smart(opts)
 end
 
 function M.palette()
@@ -96,9 +136,48 @@ function M.recent_files()
   Snacks.picker.recent({ layout = { preset = "vscode" }, filter = { cwd = true } })
 end
 
+-- ⌘N: an empty page with the caret in it, like every Mac editor.
 function M.new_file()
   normal_mode()
+  focus_editor()
   vim.cmd.enew()
+  if #vim.api.nvim_list_uis() > 0 then
+    vim.cmd.startinsert()
+  end
+end
+
+local function ask_save_path(buf, on_done)
+  local name = vim.api.nvim_buf_get_name(buf)
+  local default = name ~= "" and name or (vim.fn.getcwd() .. "/")
+  vim.ui.input({ prompt = "Save as: ", default = default, completion = "file" }, function(path)
+    if not path or vim.trim(path) == "" or path == vim.fn.getcwd() .. "/" then
+      return
+    end
+    path = vim.fn.fnamemodify(vim.fn.expand(vim.trim(path)), ":p")
+    local ok, err = pcall(function()
+      vim.fn.mkdir(vim.fs.dirname(path), "p")
+      vim.api.nvim_buf_call(buf, function()
+        vim.cmd("silent keepalt saveas! " .. vim.fn.fnameescape(path))
+        if vim.bo.filetype == "" then
+          vim.cmd("filetype detect") -- a new name can mean a new language
+        end
+      end)
+    end)
+    if not ok then
+      vim.notify(tostring(err), vim.log.levels.ERROR)
+      return
+    end
+    if on_done then
+      on_done(path)
+    end
+  end)
+end
+
+function M.save_as()
+  normal_mode()
+  if vim.bo.buftype == "" then
+    ask_save_path(vim.api.nvim_get_current_buf())
+  end
 end
 
 function M.save()
@@ -108,16 +187,16 @@ function M.save()
   end
   if vim.api.nvim_buf_get_name(0) ~= "" then
     -- Always write, even if auto-save got there first: ⌘S should visibly do
-    -- something (it formats the file and plays the save sound).
-    vim.cmd("silent! write")
+    -- something (it formats the file and plays the save sound). The ! writes
+    -- over a file that changed on disk meanwhile: ⌘S means "keep mine".
+    local ok, err = pcall(vim.cmd, "silent write!")
+    if not ok then
+      vim.notify(tostring(err), vim.log.levels.ERROR)
+    end
+    vim.b.dojo_changed_on_disk = nil
     return
   end
-  vim.ui.input({ prompt = "Save as: ", default = vim.fn.getcwd() .. "/", completion = "file" }, function(path)
-    if path and vim.trim(path) ~= "" then
-      vim.fn.mkdir(vim.fs.dirname(vim.fn.fnamemodify(path, ":p")), "p")
-      vim.cmd.saveas(vim.fn.fnameescape(path))
-    end
-  end)
+  ask_save_path(vim.api.nvim_get_current_buf())
 end
 
 function M.save_all()
@@ -129,11 +208,38 @@ local closed = {}
 
 function M.close_file()
   normal_mode()
-  local name = vim.api.nvim_buf_get_name(0)
-  if name ~= "" and vim.bo.buftype == "" then
-    table.insert(closed, name)
+  local buf = vim.api.nvim_get_current_buf()
+  local name = vim.api.nvim_buf_get_name(buf)
+  if vim.bo[buf].buftype ~= "" then
+    -- A panel (terminal, run output, a sheet): ⌘W closes the panel.
+    if vim.api.nvim_win_get_config(0).relative ~= "" or #vim.api.nvim_tabpage_list_wins(0) > 1 then
+      pcall(vim.api.nvim_win_close, 0, true)
+    end
+    return
   end
-  Snacks.bufdelete()
+  if name ~= "" then
+    table.insert(closed, name)
+    if vim.bo[buf].modified then
+      pcall(vim.cmd, "silent write!") -- named files are always saved, never asked about
+    end
+    Snacks.bufdelete({ buf = buf, force = true })
+    return
+  end
+  -- An untitled page: nothing typed, just close; otherwise ask once, plainly.
+  local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  if not vim.bo[buf].modified or vim.trim(text) == "" then
+    Snacks.bufdelete({ buf = buf, force = true })
+    return
+  end
+  vim.ui.select({ "Save…", "Don't Save", "Cancel" }, { prompt = "Keep this untitled page?" }, function(choice)
+    if choice == "Save…" then
+      ask_save_path(buf, function()
+        Snacks.bufdelete({ buf = buf, force = true })
+      end)
+    elseif choice == "Don't Save" then
+      Snacks.bufdelete({ buf = buf, force = true })
+    end
+  end)
 end
 
 function M.reopen_closed()
@@ -151,6 +257,41 @@ end
 function M.settings()
   normal_mode()
   require("dojo.settings").open()
+end
+
+function M.revert_file()
+  normal_mode()
+  require("dojo.disk").revert()
+end
+
+function M.close_other_files()
+  normal_mode()
+  local current = vim.api.nvim_get_current_buf()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if buf ~= current and vim.bo[buf].buflisted and vim.bo[buf].buftype == "" then
+      if vim.api.nvim_buf_get_name(buf) ~= "" then
+        if vim.bo[buf].modified then
+          vim.api.nvim_buf_call(buf, function()
+            pcall(vim.cmd, "silent write!")
+          end)
+        end
+        pcall(Snacks.bufdelete.delete, { buf = buf, force = true })
+      end
+    end
+  end
+end
+
+function M.reveal_in_finder()
+  require("dojo.menu").reveal()
+end
+
+function M.copy_path()
+  require("dojo.menu").copy_path()
+end
+
+function M.show_log()
+  normal_mode()
+  require("dojo.calm").show_log()
 end
 
 function M.paste_terminal()
@@ -220,13 +361,90 @@ end
 
 -- Edit --------------------------------------------------------------------
 
--- multicursor.nvim: edit with normal Vim commands, every cursor follows; Esc clears.
-function M.add_next_occurrence()
-  require("multicursor-nvim").matchAddCursor(1)
+-- ⌘D, as in VS Code and Sublime: the first press selects the word, each
+-- further press selects its next occurrence too; then type, and every copy
+-- changes. The selections are Mac-style (Select mode, lua/dojo/mac.lua).
+-- Started from a Vim selection (v…), they stay Visual: every Vim command
+-- then runs at each cursor.
+local function set_cursor_modes(from, to)
+  require("multicursor-nvim").action(function(ctx)
+    ctx:forEachCursor(function(cursor)
+      if cursor:mode() == from then
+        cursor:setMode(to)
+      end
+    end)
+  end)
 end
 
+function M.add_next_occurrence()
+  local mc = require("multicursor-nvim")
+  local mode = vim.fn.mode()
+  if mode == "n" and not mc.hasCursors() then
+    if vim.fn.expand("<cword>") ~= "" then
+      vim.cmd("normal! viw\7") -- the word, as a Mac-style selection
+    end
+    return
+  end
+  local vim_style = mode:match("^[vV\22]") ~= nil
+  if mode == "s" then
+    set_cursor_modes("s", "v") -- the plugin works on Visual selections
+  end
+  mc.matchAddCursor(1)
+  if not vim_style then
+    set_cursor_modes("v", "s")
+  end
+end
+
+-- ⌘⇧L: every occurrence at once, each one selected, ready to type over.
 function M.select_all_occurrences()
-  require("multicursor-nvim").matchAllAddCursors()
+  local mc = require("multicursor-nvim")
+  local mode = vim.fn.mode()
+  local vim_style = mode:match("^[vV\22]") ~= nil
+  local text = visual_text() or vim.fn.expand("<cword>")
+  if text == "" then
+    return
+  end
+  if mode == "n" then
+    vim.cmd("normal! viw")
+  elseif mode == "s" then
+    set_cursor_modes("s", "v")
+  end
+  mc.matchAllAddCursors()
+  if text:find("\n") then
+    return -- several lines: the cursors sit at each match, Vim-style
+  end
+  -- The plugin leaves a bare cursor at the start of each match: select them.
+  local chars = vim.fn.strchars(text)
+  mc.action(function(ctx)
+    ctx:forEachCursor(function(cursor)
+      if not cursor:hasSelection() then
+        cursor:feedkeys(chars > 1 and ("v" .. (chars - 1) .. "l") or "v")
+      end
+      if not vim_style then
+        cursor:setMode("s")
+      end
+    end)
+  end)
+end
+
+function M.select_all()
+  require("dojo.mac").select_all()
+end
+
+function M.select_line()
+  require("dojo.mac").select_line()
+end
+
+function M.copy_selection()
+  require("dojo.mac").copy()
+end
+
+function M.cut_selection()
+  require("dojo.mac").cut()
+end
+
+function M.paste_over_selection()
+  require("dojo.mac").paste()
 end
 
 function M.rename()
@@ -413,6 +631,11 @@ function M.toggle_terminal()
   if term and not term:valid() then
     vim.schedule(focus_editor) -- hidden: back to your file, not the tree
   end
+end
+
+function M.review()
+  normal_mode()
+  require("dojo.review").pick()
 end
 
 function M.lazygit()

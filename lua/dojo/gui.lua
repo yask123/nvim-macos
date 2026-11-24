@@ -18,6 +18,9 @@ function M.setup()
     end
   end
 
+  -- Then the rest of your terminal's environment (nvm, rbenv, cargo, …).
+  require("dojo.env").setup()
+
   -- The text size you left it at (⌘= / ⌘-, or Settings).
   local zoom = require("dojo.settings").get("zoom")
   if type(zoom) == "number" and zoom >= 0.5 and zoom <= 2.5 then

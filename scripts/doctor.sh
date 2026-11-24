@@ -153,6 +153,13 @@ if [[ $with_app -eq 1 ]]; then
   else
     warn "Neovide config is not linked; run scripts/setup-dojo.sh"
   fi
+  # `code .` in a terminal: the link, and the shell line that makes it win
+  # over another program's `code`.
+  if [[ -L "$user_home/.local/bin/code" && "$(readlink "$user_home/.local/bin/code")" == "$config_dir"/* ]]; then
+    ok "code command"
+  else
+    warn "the code command is not linked; run scripts/link-cli.sh"
+  fi
 fi
 
 if [[ -f "$config_dir/init.lua" && -f "$config_dir/lazy-lock.json" ]]; then

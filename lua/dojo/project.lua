@@ -95,7 +95,11 @@ function M.open(dir, file)
     vim.cmd.edit(vim.fn.fnameescape(real_file))
     return
   end
-  if dir == cwd and #vim.fn.getbufinfo({ buflisted = 1 }) > 0 then
+  -- Already in this folder with something open (an empty first page doesn't count).
+  local in_use = vim.tbl_filter(function(info)
+    return info.name ~= "" or info.changed == 1
+  end, vim.fn.getbufinfo({ buflisted = 1 }))
+  if dir == cwd and #in_use > 0 then
     if file then
       vim.cmd.edit(vim.fn.fnameescape(file))
     else
@@ -115,6 +119,7 @@ function M.open(dir, file)
   vim.fn.chdir(dir)
   M.title() -- the DirChanged event plays the "new level" jingle
 
+  vim.api.nvim_exec_autocmds("User", { pattern = "DojoProjectOpened" }) -- untitled pages come back
   if ok and session_file() then
     persistence.load()
     if file then

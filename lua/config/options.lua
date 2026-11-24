@@ -63,6 +63,9 @@ vim.opt.smoothscroll = true
 vim.opt.swapfile = false
 vim.opt.autoread = true
 
+-- No "3 more lines" / "5 fewer lines" / "4 lines yanked" after every edit.
+vim.opt.report = 99999
+
 -- Show matching brackets
 vim.opt.showmatch = true
 

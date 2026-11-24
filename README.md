@@ -6,14 +6,34 @@ My reproducible Neovim setup for macOS, based on
 It includes **Code**: Neovim as a quiet desktop editor. You open it like
 Sublime Text or VS Code, it uses the Cmd shortcuts you already know, and it
 stays out of the way: no sidebars you didn't ask for, no badges, no chatter.
-(The app was called Dojo until November 2026. The `dojo` command and the code
-keep that name: `code` in a terminal already belongs to VS Code.)
+Underneath it is all Vim, with nothing taken away.
+(The app was called Dojo until November 2026; the code keeps that name, and
+the command answers to both `code` and `dojo`.)
 
 ## Code in one minute
 
-- **Open it** from Spotlight ("Code"), the Dock, or a terminal. `dojo ~/code/app`
-  (or `v .` in zsh) opens a folder as the project. You can also drop a folder
-  onto the Code icon.
+- **Open it** from Spotlight ("Code"), the Dock, or a terminal: `code .` opens
+  this folder as the project, `code app.rb:42` a file at a line, `code -w file`
+  waits until you close it (`git config --global core.editor "dojo -w"`),
+  `code -d a b` compares, `ps aux | code -` reads a pipe. You can also drop a
+  folder onto the Code icon. If VS Code's own `code` is installed, it stays
+  reachable as `vscode`.
+- **Edit the way a Mac does.** ⌘N is a new file, ⌘S asks where to keep it.
+  Shift+arrows select (⌥ by word, ⌘ to the line's end), so does the mouse,
+  and typing replaces what is selected. ⌘D selects a word and then each next
+  occurrence; type, and every copy changes. Selections made the Vim way (`v`,
+  `V`) stay Vim selections; Ctrl-g flips between the two kinds.
+- **Nothing asks, nothing is lost.** Files save themselves; quitting never
+  prompts, and untitled pages come back the next time the folder is open. A
+  file that changes on disk (a checkout, an agent editing beside you) changes
+  on screen. Errors arrive in plain words, never as codes or stack traces
+  (⌘⇧P › Show Log keeps the originals).
+- **Languages set themselves up.** Open a Ruby, Go, Rust, C, HTML, CSS, YAML
+  or shell file and its completion, go to definition and rename install in
+  the background the first time. Rails apps get Ruby's own language server on
+  the app's Ruby, plus `gf` on partials and `:A` to the test. The app reads
+  your shell's environment at start, so nvm, rbenv and friends are found.
+- **Review a pull request** with ⌘K ⌘P: see below.
 - **The window opens centred** on the screen under your mouse, and the desktop
   behind it dims while you work (⌘K D turns that off).
 - **Open a folder** with ⌘O: a two-column browser inside the window (`h j k l`
@@ -32,13 +52,41 @@ keep that name: `code` in a terminal already belongs to VS Code.)
 | Go to definition / references | F12 (or ⌘-click) / ⇧F12 | `gd` / `gr` |
 | Rename a symbol · quick fix | F2 · ⌘. | `Space c r` · `Space c a` |
 | Show / hide the file tree | ⌘B | `Space e` |
-| Run this file · terminal panel | ⌘R · ⌘J | `Space r r` · `Ctrl-/` |
+| Run this file · terminal panel | ⌘R · ⌘T (or ⌘J) | `Space r r` · `Ctrl-/` |
+| New file · save as · next open file | ⌘N · ⌘⇧S · ⌃Tab | `:enew` · `:saveas` · `L` |
+| In ⌘P: a command · a symbol here · a symbol anywhere · a line | `>` · `@` · `#` · `:` | `Space :` · `Space s s` · `Space s S` · `:42` |
+| Review a pull request | ⌘K ⌘P | `Space g p` |
 | Fold a big file, one level at a time | ⌘K ⌘0 · ⌘K ⌘] | `zM` · `zr` |
 | Comment · multi-cursor | ⌘/ · ⌘D | `gcc` · `Ctrl-n` |
 | Colour theme (previews as you browse) | ⌘K ⌘T | `Space u C` |
 | Zen: just the page | ⌘K Z | `Space u z` |
 
-Neovide's own menu keeps ⌘N (new window), ⌘H, ⌘M, ⌘Q and ⌃⌘F.
+The app's own menu keeps ⌘⇧N (new window), ⌘H, ⌘M, ⌘Q and ⌃⌘F. Any other ⌘
+chord with nothing bound to it does nothing, rather than running the bare key.
+Right-click gives a short menu that fits what you clicked (code, the file
+tree, a terminal).
+
+### Reviewing a pull request
+
+⌘K ⌘P lists this repository's open pull requests and the ones waiting for you
+anywhere (or paste a link). One takes over the editor (the file tree steps
+aside, and `q` puts everything back):
+
+- **The trace.** One request drawn as a single line through the system: each
+  part is a rail, time runs left to right, and the line turns where a step
+  hands over. Its colour is the diff: quiet where nothing changed, green where
+  a step is new, amber where it changed, a dashed rose ghost where it is gone.
+  `h` `l` walk the steps, `b` `d` `a` show before, the change, after.
+  Claude draws it from the diff and never reviews: no verdicts, no advice.
+- **The code**, sorted into reading order (focus, skim, skip). ↩ opens a
+  file's changes in the file's own colours; `]` and `[` jump between changes,
+  Tab to the next file, and comments already on GitHub sit under their lines.
+- **Your review.** `c` writes a comment on a line, `S` sends the review
+  (comment, approve or request changes) after showing what will be posted.
+
+It uses the `gh` command you are signed in to, and Claude through Claude Code
+(`claude`) or, failing that, an API key in `ANTHROPIC_API_KEY`. Without either
+the review still opens, minus the trace. Readings are cached per commit.
 
 ### Look and feel
 
@@ -144,8 +192,11 @@ Useful installer switches:
 
 - Python: basedpyright, Ruff, Black, virtual-environment selection
 - TypeScript/JavaScript: vtsls, Prettier, path-safe file runner
-- JSON, Lua and Swift (Xcode's sourcekit-lsp) language support; other
-  languages install their syntax support the first time you open such a file
+- JSON, Lua and Swift (Xcode's sourcekit-lsp) language support
+- Ruby and Rails, Go, Rust, C and C++ (Xcode's clangd), HTML, CSS, YAML, TOML,
+  shell, Docker, PHP, Svelte, Zig and Java: code help installs itself the
+  first time you open such a file (`lua/dojo/lang.lua`); any other language
+  gets its syntax colours the same way
 - Blink completion (Tab or Enter accepts), Snacks picker and explorer, Lazygit
 - a one-line hint of what a call takes while you type it, the argument you
   are on lit up (⌃K lists every way to call it)
@@ -161,11 +212,10 @@ Leader is the space bar. The full, searchable list is in the app itself
 
 | Key | Action |
 | --- | --- |
-| `Space r r` | Save and run the current Python, JS/TS, Lua, shell, Go, or Rust file |
+| `Space r r` | Save and run the current file: Python, JS/TS, Ruby (a Rails test runs as a test), Go, Rust, Swift, C, C++, Lua, shell, Java, PHP, … |
 | `Space r q` | Close the output panel |
 | `Space r i` | Open a Python REPL |
 | `Ctrl+\` | Toggle a floating terminal |
-| `Ctrl+W` | Close the current buffer (intentional VS Code-style override) |
 | `Tab` / `Shift+Tab` | Next / previous buffer |
 | `Ctrl+A` / `Ctrl+E` | Line start / end (as in every Mac text field; select all is ⌘A) |
 | `Ctrl+N` | Add a cursor at the next match (multicursor.nvim; `Esc` clears) |
@@ -174,8 +224,9 @@ All normal LazyVim keys remain available except where explicitly overridden.
 
 The run command uses argument arrays rather than a shell string, so filenames
 with spaces or shell punctuation are handled safely. TypeScript uses
-`npx --yes tsx@4.19.3` and may download that pinned version on first use. Go
-and Rust runners additionally require `go` and `cargo`.
+`npx --yes tsx@4.19.3` and may download that pinned version on first use. Each
+language needs its own toolchain installed (`go`, `cargo`, `ruby`, …); when
+one is missing ⌘R says so instead of failing.
 
 ## Check or develop the setup
 
