@@ -64,7 +64,9 @@ return {
           header = header,
           keys = {
             { key = "o", desc = "Open Folder…", action = project("choose_folder") },
+            { key = "n", desc = "New File", action = ":lua require('dojo.actions').new_file()" },
             { key = "r", desc = "Recent Files", action = ":lua Snacks.picker.recent()" },
+            { key = "p", desc = "Review a Pull Request…", action = ":lua require('dojo.actions').review()" },
             { key = "?", desc = "Keyboard Shortcuts", action = ":Dojo" },
             { key = ",", desc = "Settings", action = ":lua require('dojo.actions').settings()" },
             { key = "q", desc = "Quit", action = ":qa" },

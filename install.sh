@@ -574,7 +574,8 @@ if [[ $app_built -eq 1 ]]; then
   else
     printf '  %s%sCode is ready.%s\n' "$neon" "$bold" "$off"
   fi
-  printf '  %sOpen it from Spotlight: ⌘Space, then type "Code". Update any time with nvim-update.%s\n\n' "$dim" "$off"
+  printf '  %sOpen it from Spotlight (⌘Space, then "Code"), or in a new terminal: code .%s\n' "$dim" "$off"
+  printf '  %sUpdate any time with nvim-update.%s\n\n' "$dim" "$off"
   if [[ $open_after -eq 1 && $live -eq 1 ]]; then
     open "$apps_dir/Code.app" >/dev/null 2>&1 || true
   fi

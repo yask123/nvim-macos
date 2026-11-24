@@ -69,6 +69,11 @@ return {
     opts = {
       options = {
         always_show_bufferline = false,
+        name_formatter = function(buf)
+          if buf.name == "[No Name]" or buf.name == "" then
+            return "Untitled"
+          end
+        end,
         diagnostics = false,
         show_buffer_close_icons = false,
         show_close_icon = false,
@@ -216,21 +221,41 @@ return {
       routes = {
         { filter = { event = "msg_show", kind = "", find = "written" }, opts = { skip = true } },
         { filter = { event = "msg_show", kind = "search_count" }, opts = { skip = true } },
+        -- Undo and redo speak for themselves: no "1 change; before #4  2 seconds ago".
+        { filter = { event = "msg_show", find = "; before #%d+" }, opts = { skip = true } },
+        { filter = { event = "msg_show", find = "; after #%d+" }, opts = { skip = true } },
+        { filter = { event = "msg_show", find = "^Already at %a+ change" }, opts = { skip = true } },
+        { filter = { event = "msg_show", find = "^%-%-No lines in buffer%-%-" }, opts = { skip = true } },
       },
     },
   },
 
-  -- Plain notifications: one line of text, no icon or title bar.
+  -- Plain notifications: one line of text, no icon or title bar, and in plain
+  -- words: Vim's error codes and stack traces are translated on the way in
+  -- (lua/dojo/calm.lua).
   {
     "folke/snacks.nvim",
-    opts = { notifier = { style = "minimal" } },
+    opts = {
+      notifier = {
+        style = "minimal",
+        filter = function(notif)
+          return require("dojo.calm").filter(notif)
+        end,
+      },
+    },
+  },
+
+  -- A file with a syntax error can't be formatted yet: say nothing, like VS Code.
+  {
+    "stevearc/conform.nvim",
+    opts = { notify_on_error = false, notify_no_formatters = false },
   },
 
   -- Leader-key hints appear only if you pause, not on every keystroke, and
   -- never over Code's own sheets (Open Folder, Settings), which have their own keys.
   {
     "folke/which-key.nvim",
-    opts = { delay = 400, disable = { ft = { "dojo_browse", "dojo_settings" } } },
+    opts = { delay = 400, disable = { ft = { "dojo_browse", "dojo_settings", "dojo_review" } } },
   },
 
   -- Disabled: zen-mode and twilight (Snacks.zen covers it).

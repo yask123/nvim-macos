@@ -43,7 +43,7 @@ move_path() {
 points_into_config() {
   [[ -L "$1" && "$(readlink "$1")" == "$target_config"/* ]]
 }
-for link in "$config_home/neovide/config.toml" "$config_home/ghostty/config" "$user_home/.local/bin/dojo"; do
+for link in "$config_home/neovide/config.toml" "$config_home/ghostty/config" "$user_home/.local/bin/dojo" "$user_home/.local/bin/code"; do
   if points_into_config "$link"; then
     rm -f -- "$link"
     printf 'Removed %s\n' "$link"

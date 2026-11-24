@@ -1,17 +1,68 @@
 #!/usr/bin/env bash
-# dojo — open Neovim (the Code app) like a GUI editor.
+# code (also installed as `dojo`) — open things in the Code app from a terminal.
 #
-#   dojo                open the dashboard (or bring the window forward)
-#   dojo <folder>       open that folder as the project (restores its session)
-#   dojo <file>         open a file, with its git repo (or folder) as the project
+#   code                     bring the window forward (or start the app)
+#   code .                   open this folder as the project (restores its session)
+#   code <folder>            open that folder
+#   code <file>…             open files; a file in a git repo brings its repo along
+#   code <file>:12:5         …at line 12, column 5 (also: -g / --goto)
+#   code -n <path>           in a new window
+#   code -w <file>           wait until the file is closed (git: core.editor "code -w")
+#   code -d <a> <b>          compare two files side by side
+#   <command> | code -       read standard input into an untitled page
+#   code -v | -h             version, help
 #
-# If the app is already running, the folder opens in the existing window (like
-# VS Code's Open Folder) through the socket it serves. Otherwise Neovide
-# starts centred on the screen under the mouse at a calm ~3:2 proportion.
-# Neovide has no position flag, so the geometry is written to its settings
-# file just before a cold start (points × backing scale, top-left origin).
+# If the app is running, things open in its window through the socket it
+# serves (like VS Code's `code`). Otherwise the app starts centred on the
+# screen under the mouse at a calm ~3:2 proportion: Neovide has no position
+# flag, so the geometry is written to its settings file just before a cold
+# start (points × backing scale, top-left origin).
+#
+# VS Code's own command is often installed under the same name. Flags only it
+# understands (--install-extension, --list-extensions, tunnel, …) are handed
+# on to it when it is there.
 
 set -Eeuo pipefail
+
+me="$(basename -- "$0")"
+script="${BASH_SOURCE[0]}"
+while [[ -L "$script" ]]; do
+  link="$(readlink "$script")"
+  [[ "$link" == /* ]] && script="$link" || script="$(dirname -- "$script")/$link"
+done
+config_dir="$(CDPATH='' cd -- "$(dirname -- "$script")/.." && pwd)"
+
+usage() {
+  cat <<EOF
+Usage: $me [options] [paths…]
+
+  $me                   bring Code forward (or start it)
+  $me .                 open this folder as the project
+  $me <file>…           open files (file:line or file:line:column jumps there)
+  -n, --new-window        open in a new window
+  -r, --reuse-window      open in the window that is already there (the default)
+  -g, --goto <file:line[:column]>
+  -w, --wait              wait until the files are closed before returning
+  -d, --diff <a> <b>      compare two files
+  -                       read standard input into an untitled page
+  -v, --version           print the version
+  -h, --help              this help
+EOF
+}
+
+# VS Code's CLI, if it is installed (never this script).
+vscode_cli() {
+  local candidate
+  for candidate in \
+    "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+    "$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
 
 # The Code app (a renamed Neovide, see make-app.sh; called Dojo before
 # November 2026), or plain Neovide.
@@ -28,7 +79,7 @@ neovide_bin="$neovide_app/Contents/MacOS/$(basename -- "$neovide_app" .app)"
 [[ -x "$neovide_bin" ]] || neovide_bin="$neovide_app/Contents/MacOS/neovide"
 process_name="$(basename -- "$neovide_bin")"
 settings="$HOME/Library/Application Support/neovide/neovide-settings.json"
-socket="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/dojo.sock"
+socket="${DOJO_SOCKET:-${XDG_STATE_HOME:-$HOME/.local/state}/nvim/dojo.sock}"
 
 nvim_bin="$(command -v nvim || true)"
 for candidate in /opt/homebrew/bin/nvim /usr/local/bin/nvim; do
@@ -36,28 +87,141 @@ for candidate in /opt/homebrew/bin/nvim /usr/local/bin/nvim; do
   [[ -x "$candidate" ]] && nvim_bin="$candidate"
 done
 
+new_window=0
+wait=0
+diff=0
+stdin=0
+targets=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -v | --version)
+      version="$(cat "$config_dir/VERSION" 2>/dev/null || printf 'dev')"
+      printf 'Code %s\n' "$version"
+      [[ -n "$nvim_bin" ]] && "$nvim_bin" --version | head -n 1
+      exit 0
+      ;;
+    -n | --new-window) new_window=1 ;;
+    -r | --reuse-window) new_window=0 ;;
+    -w | --wait) wait=1 ;;
+    -d | --diff) diff=1 ;;
+    -g | --goto) ;; # file:line:column is understood anyway
+    -a | --add) ;;  # VS Code: add a folder to the workspace; here it just opens
+    -) stdin=1 ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        targets+=("$1")
+        shift
+      done
+      break
+      ;;
+    --install-extension | --uninstall-extension | --list-extensions | --show-versions | --status | \
+      --locate-shell-integration-path | --locate-extension | --enable-proposed-api | --telemetry | \
+      --extensions-dir | --user-data-dir | --profile | --disable-extensions | --verbose | --log | \
+      tunnel | serve-web | chat | --install-extension=* | --extensions-dir=* | --user-data-dir=*)
+      if real="$(vscode_cli)"; then
+        exec "$real" "$@"
+      fi
+      printf '%s: %s belongs to Visual Studio Code, which is not installed here.\n' "$me" "$1" >&2
+      exit 2
+      ;;
+    -*)
+      printf '%s: unknown option %s (try %s --help)\n' "$me" "$1" "$me" >&2
+      exit 2
+      ;;
+    *) targets+=("$1") ;;
+  esac
+  shift
+done
+
 if [[ ! -x "$neovide_bin" ]]; then
-  printf 'Neovide is not installed at %s (brew install --cask neovide-app)\n' "$neovide_app" >&2
+  # shellcheck disable=SC2016 # the command is printed, not run
+  printf 'The Code app is not installed at %s.\nInstall it: bash -c "$(curl -fsSL https://yask.dev/code/install)"\n' "$neovide_app" >&2
   exit 1
 fi
 
-target="${1:-}"
-dir=""
-file=""
-if [[ -n "$target" ]]; then
-  if [[ -d "$target" ]]; then
-    dir="$(cd -- "$target" && pwd -P)"
-  elif [[ -e "$target" || -d "$(dirname -- "$target")" ]]; then
-    dir="$(cd -- "$(dirname -- "$target")" && pwd -P)"
-    file="$dir/$(basename -- "$target")"
-    # Like VS Code: a file inside a git repo opens with the repo as the project.
-    root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
-    [[ -n "$root" ]] && dir="$root"
-  else
-    printf 'No such file or folder: %s\n' "$target" >&2
-    exit 1
-  fi
+if [[ $diff -eq 1 && ${#targets[@]} -ne 2 ]]; then
+  printf '%s: --diff takes two files\n' "$me" >&2
+  exit 2
 fi
+
+# The request: one line per thing to do, tab-separated, read by lua/dojo/cli.lua.
+runtime_dir="${TMPDIR:-/tmp}"
+request="$(mktemp "${runtime_dir%/}/code-request.XXXXXX")"
+token="$(basename -- "$request")"
+dir=""
+first_file=""
+opened=0
+
+absolute() { # an existing or not-yet-existing path, made absolute
+  local path="$1"
+  if [[ -d "$path" ]]; then
+    (cd -- "$path" && pwd -P)
+  elif [[ -d "$(dirname -- "$path")" ]]; then
+    printf '%s/%s' "$(cd -- "$(dirname -- "$path")" && pwd -P)" "$(basename -- "$path")"
+  else
+    return 1
+  fi
+}
+
+if [[ $stdin -eq 1 ]]; then
+  piped="$(mktemp "${runtime_dir%/}/code-stdin.XXXXXX")"
+  cat >"$piped"
+  printf 'stdin\t%s\n' "$piped" >>"$request"
+  opened=1
+fi
+
+if [[ $diff -eq 1 ]]; then
+  left="$(absolute "${targets[0]}")" || {
+    printf 'No such file: %s\n' "${targets[0]}" >&2
+    exit 1
+  }
+  right="$(absolute "${targets[1]}")" || {
+    printf 'No such file: %s\n' "${targets[1]}" >&2
+    exit 1
+  }
+  printf 'diff\t%s\t%s\n' "$left" "$right" >>"$request"
+  opened=1
+else
+  for target in ${targets[@]+"${targets[@]}"}; do
+    line=""
+    column=""
+    # file:line or file:line:column, unless a file really has that name.
+    if [[ ! -e "$target" && "$target" =~ ^(.+):([0-9]+):([0-9]+)$ ]]; then
+      target="${BASH_REMATCH[1]}"
+      line="${BASH_REMATCH[2]}"
+      column="${BASH_REMATCH[3]}"
+    elif [[ ! -e "$target" && "$target" =~ ^(.+):([0-9]+)$ ]]; then
+      target="${BASH_REMATCH[1]}"
+      line="${BASH_REMATCH[2]}"
+    fi
+    if [[ -d "$target" ]]; then
+      dir="$(absolute "$target")"
+      continue
+    fi
+    path="$(absolute "$target")" || {
+      printf 'No such file or folder: %s\n' "$target" >&2
+      rm -f -- "$request"
+      exit 1
+    }
+    printf 'file\t%s\t%s\t%s\n' "$path" "$line" "$column" >>"$request"
+    [[ -z "$first_file" ]] && first_file="$path"
+    opened=1
+  done
+fi
+
+# Like VS Code: a file inside a git repo opens with the repo as the project.
+# (Not while something waits on the file: `git commit` must stay where it is.)
+if [[ -z "$dir" && -n "$first_file" && $wait -eq 0 && $diff -eq 0 ]]; then
+  dir="$(git -C "$(dirname -- "$first_file")" rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+[[ -n "$dir" ]] && printf 'dir\t%s\n' "$dir" >>"$request"
+[[ $wait -eq 1 && $opened -eq 1 ]] && printf 'wait\t%s\n' "$token" >>"$request"
 
 # Vimscript single-quoted string literal.
 vim_quote() {
@@ -66,25 +230,54 @@ vim_quote() {
   printf "'%s'" "$s"
 }
 
-# 1. The app is running: switch its window to the folder (and file), then focus it.
-if [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remote-expr 1 >/dev/null 2>&1; then
-  if [[ -n "$dir" ]]; then
-    args="[$(vim_quote "$dir")"
-    [[ -n "$file" ]] && args+=", $(vim_quote "$file")"
-    "$nvim_bin" --server "$socket" --remote-expr \
-      "luaeval('require(\"dojo.project\").open(_A[1], _A[2])', $args])" >/dev/null
+running() {
+  [[ -S "$socket" && -n "$nvim_bin" ]] && "$nvim_bin" --server "$socket" --remote-expr 1 >/dev/null 2>&1
+}
+
+send_request() {
+  "$nvim_bin" --server "$socket" --remote-expr \
+    "luaeval('require(\"dojo.cli\").run(_A)', $(vim_quote "$request"))" >/dev/null
+}
+
+wait_for_close() {
+  [[ $wait -eq 1 && $opened -eq 1 ]] || return 0
+  local tries=0
+  until running; do # a cold start: give the app a moment to come up
+    tries=$((tries + 1))
+    [[ $tries -gt 150 ]] && return 0
+    sleep 0.2
+  done
+  while running; do
+    state="$("$nvim_bin" --server "$socket" --remote-expr \
+      "luaeval('require(\"dojo.cli\").waiting(_A)', $(vim_quote "$token"))" 2>/dev/null || printf '0')"
+    [[ "$state" == "1" ]] || break
+    sleep 0.3
+  done
+}
+
+# 1. The app is running: do it in its window, then bring the window forward.
+if [[ $new_window -eq 0 ]] && running; then
+  if [[ -s "$request" ]]; then
+    send_request
+  else
+    rm -f -- "$request"
   fi
-  open -a "$neovide_app"
+  [[ -n "${DOJO_NO_FOCUS:-}" ]] || open -a "$neovide_app"
+  wait_for_close
   exit 0
 fi
 
-# 2. Neovide is running without the app's socket: give the folder its own window.
+# 2. A new window was asked for, or the app runs without serving the socket:
+#    give the folder its own window.
 if pgrep -xq "$process_name"; then
-  if [[ -z "$dir" ]]; then
+  if [[ -z "$dir" && -z "$first_file" ]]; then
+    rm -f -- "$request"
     open -a "$neovide_app"
   else
-    args=(--reuse-instance --new-window --chdir "$dir")
-    [[ -n "$file" ]] && args+=("$file")
+    args=(--reuse-instance --new-window)
+    [[ -n "$dir" ]] && args+=(--chdir "$dir")
+    [[ -n "$first_file" ]] && args+=("$first_file")
+    rm -f -- "$request"
     NEOVIM_BIN="${nvim_bin:-nvim}" "$neovide_bin" "${args[@]}" >/dev/null 2>&1 &
     disown
   fi
@@ -111,19 +304,27 @@ let w = Math.round(Math.min(h * 1.5, v.size.width * (small ? 0.9 : 0.72)));
 const x = Math.round(v.origin.x + (v.size.width - w) / 2);
 const top = primary.size.height - (v.origin.y + v.size.height);
 const y = Math.round(top + (v.size.height - h) / 2);
-[x, y, w, h].map((n) => Math.round(n * scale)).join(" ");'
+[x, y, w, h].map((n) => Math.round(n * scale)).join(" ");' 2>/dev/null || true
 )"
-read -r x y w h <<<"$geometry"
-mkdir -p "$(dirname -- "$settings")"
-printf '{"window":{"Windowed":{"position":{"x":%s,"y":%s},"pixel_size":{"width":%s,"height":%s},"grid_size":{"width":120,"height":40}}}}\n' \
-  "$x" "$y" "$w" "$h" >"$settings"
+if [[ -n "$geometry" ]]; then
+  read -r x y w h <<<"$geometry"
+  mkdir -p "$(dirname -- "$settings")"
+  printf '{"window":{"Windowed":{"position":{"x":%s,"y":%s},"pixel_size":{"width":%s,"height":%s},"grid_size":{"width":120,"height":40}}}}\n' \
+    "$x" "$y" "$w" "$h" >"$settings"
+fi
 
 # Frame, title, icon and fonts come from ~/.config/neovide/config.toml.
 launch_args=()
 [[ -n "$dir" ]] && launch_args+=(--chdir "$dir")
-[[ -n "$file" ]] && launch_args+=(-- "$file")
 # NEOVIM_BIN: Neovide starts Neovim through a login shell, which may not have
 # Homebrew on its PATH (a fresh Mac without the ~/.zprofile line).
+# DOJO_REQUEST: the files, lines and waiting asked for, picked up at startup.
 env_args=()
-[[ -n "$nvim_bin" ]] && env_args=(--env "NEOVIM_BIN=$nvim_bin")
+[[ -n "$nvim_bin" ]] && env_args+=(--env "NEOVIM_BIN=$nvim_bin")
+if [[ -s "$request" ]]; then
+  env_args+=(--env "DOJO_REQUEST=$request")
+else
+  rm -f -- "$request"
+fi
 open ${env_args[@]+"${env_args[@]}"} -a "$neovide_app" --args ${launch_args[@]+"${launch_args[@]}"}
+wait_for_close

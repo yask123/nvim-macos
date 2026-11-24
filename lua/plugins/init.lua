@@ -45,6 +45,9 @@ return {
       set({ "n", "x", "i" }, "<D-M-Down>", function()
         mc.lineAddCursor(1)
       end, { desc = "Add cursor below" })
+      set("n", "<M-LeftMouse>", mc.handleMouse, { desc = "Add cursor at click" }) -- ⌥-click, as in VS Code
+      set("n", "<M-LeftDrag>", mc.handleMouseDrag)
+      set("n", "<M-LeftRelease>", mc.handleMouseRelease)
       set("n", "<C-LeftMouse>", mc.handleMouse, { desc = "Add cursor at click" })
       set("n", "<C-LeftDrag>", mc.handleMouseDrag)
       set("n", "<C-LeftRelease>", mc.handleMouseRelease)
@@ -80,7 +83,11 @@ return {
         cancel_deferred_save = { "InsertEnter" },
       },
       condition = function(buf)
-        return vim.bo[buf].modifiable and vim.bo[buf].buftype == "" and vim.api.nvim_buf_get_name(buf) ~= ""
+        return vim.bo[buf].modifiable
+          and vim.bo[buf].buftype == ""
+          and vim.api.nvim_buf_get_name(buf) ~= ""
+          -- Changed on disk while you had unsaved edits: you decide (⌘S or Revert File).
+          and not vim.b[buf].dojo_changed_on_disk
       end,
       write_all_buffers = false,
       debounce_delay = 1000,

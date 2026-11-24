@@ -2,7 +2,7 @@
 # Build ~/Applications/Code.app: the editor as a Mac app of its own. It is a
 # copy of Neovide with its own name, icon and identifier, so the menu bar says
 # "Code" (About Code, Quit Code), and so do ⌘Tab, the Dock and Activity
-# Monitor. Also links the `dojo` command. Safe to re-run (nvim-update does, so
+# Monitor. Also links the `code` and `dojo` commands. Safe to re-run (nvim-update does, so
 # a newer Neovide or a new icon is picked up).
 #
 # The app was called Dojo until November 2026; the code, the `dojo` command
@@ -19,12 +19,9 @@ bundle_id="dev.dojo.editor"
 pb=/usr/libexec/PlistBuddy
 
 mkdir -p "$HOME/.local/bin" "$app_dir"
-bin="$HOME/.local/bin/dojo"
-if [[ -e "$bin" && ! -L "$bin" ]] || { [[ -L "$bin" ]] && [[ "$(realpath "$bin")" != "$(realpath "$config_dir/scripts/dojo")" ]]; }; then
-  printf 'Skipping %s: it is not this repo'"'"'s dojo script\n' "$bin"
-else
-  ln -sf "$config_dir/scripts/dojo" "$bin"
-fi
+# The terminal command, under both names: `code .` like VS Code's, and `dojo`
+# (the name that is never taken by something else).
+"$config_dir/scripts/link-cli.sh"
 
 if [[ ! -x "$neovide_app/Contents/MacOS/neovide" ]]; then
   printf 'Neovide is not installed at %s (brew install --cask neovide-app)\n' "$neovide_app" >&2
@@ -75,6 +72,15 @@ done
 "$pb" -c "Delete :LSEnvironment" "$sp" 2>/dev/null || true
 if [[ -n "$nvim_bin" ]]; then
   "$pb" -c "Add :LSEnvironment dict" -c "Add :LSEnvironment:NEOVIM_BIN string $nvim_bin" "$sp"
+fi
+
+# ⌘N is New File, as in every editor; a new window is ⌘⇧N. Neovide's menu
+# binds New Window to ⌘N and offers no setting, so use the Mac's own way of
+# rebinding a menu item: the app's NSUserKeyEquivalents (what System Settings ›
+# Keyboard › App Shortcuts writes). "@" is ⌘, "$" is ⇧.
+if [[ -z "${DOJO_SKIP_REGISTER:-}" ]]; then
+  # shellcheck disable=SC2016 # '@$n' is the literal key code for ⌘⇧N
+  defaults write "$bundle_id" NSUserKeyEquivalents -dict-add "New Window" '@$n' >/dev/null 2>&1 || true
 fi
 
 # Folders can be dropped on the icon too (they open as the project).

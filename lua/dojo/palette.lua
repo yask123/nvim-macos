@@ -9,6 +9,39 @@ end
 
 local extras = {
   {
+    desc = "Revert file (take the version on disk)",
+    vim = ":e!",
+    run = function()
+      require("dojo.actions").revert_file()
+    end,
+  },
+  {
+    desc = "Close other files",
+    vim = "Space b o",
+    run = function()
+      require("dojo.actions").close_other_files()
+    end,
+  },
+  {
+    desc = "Reveal in Finder",
+    run = function()
+      require("dojo.actions").reveal_in_finder()
+    end,
+  },
+  {
+    desc = "Copy path of this file",
+    run = function()
+      require("dojo.actions").copy_path()
+    end,
+  },
+  {
+    desc = "Show Log (what went wrong, word for word)",
+    vim = ":messages",
+    run = function()
+      require("dojo.actions").show_log()
+    end,
+  },
+  {
     desc = "All Neovim commands…",
     vim = ":",
     run = function()

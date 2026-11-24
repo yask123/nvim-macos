@@ -1,6 +1,7 @@
 -- Languages that just work: common treesitter parsers up front, any other
 -- parser installed the first time you open that kind of file, and Swift with
--- Xcode's own language server.
+-- Xcode's own language server. Code help (completion, go to definition) for
+-- the other languages sets itself up in lua/dojo/lang.lua.
 
 -- Open a file whose parser is missing: install it in the background, then
 -- re-run FileType so LazyVim switches on highlighting, indents and folds.
@@ -24,8 +25,7 @@ local function auto_install()
       if vim.tbl_contains(ts.get_installed(), lang) then
         return
       end
-      pending[lang] = true
-      vim.notify("Installing " .. lang .. " support…", vim.log.levels.INFO, { title = require("dojo").name })
+      pending[lang] = true -- a few seconds, in the background; colour simply appears
       ts.install({ lang }, { summary = false }):await(function(err)
         vim.schedule(function()
           if err or vim.v.exiting ~= vim.NIL then
@@ -57,6 +57,17 @@ return {
         once = true,
         callback = auto_install,
       })
+    end,
+  },
+
+  -- Rails: gf on a partial, a model or a route goes there; :A flips between a
+  -- file and its test, :R to the related view / controller / migration.
+  -- It only wakes up inside a Rails app.
+  {
+    "tpope/vim-rails",
+    ft = { "ruby", "eruby", "yaml", "haml", "slim", "javascript", "css", "scss" },
+    cond = function()
+      return true
     end,
   },
 

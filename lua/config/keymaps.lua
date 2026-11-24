@@ -46,15 +46,8 @@ end, { noremap = true, silent = true, desc = "Open Python REPL" })
 
 vim.api.nvim_set_keymap("n", "<leader>w", ":w<CR>", { noremap = true, silent = true })
 
--- Close current buffer with Ctrl+W (VSCode-style, overrides window commands)
-vim.keymap.set("n", "<C-w>", function()
-  local has_bufremove, bufremove = pcall(require, "mini.bufremove")
-  if has_bufremove then
-    bufremove.delete(0, false)
-  else
-    vim.cmd("bdelete")
-  end
-end, { noremap = true, silent = true, desc = "Close buffer" })
+-- Ctrl-W is Vim's window prefix (Ctrl-W v splits, Ctrl-W w moves on) and is
+-- left alone; ⌘W closes the file.
 
 -- Navigate buffers (terminal-friendly alternatives)
 vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { noremap = true, silent = true, desc = "Previous buffer" })
@@ -70,7 +63,7 @@ vim.keymap.set("n", "<leader>bo", function()
       if has_bufremove then
         bufremove.delete(buf, false)
       else
-        vim.api.nvim_buf_delete(buf, { force = false })
+        pcall(vim.api.nvim_buf_delete, buf, { force = false })
       end
     end
   end
@@ -84,12 +77,17 @@ vim.keymap.set("i", "<C-a>", "<C-o>^", { desc = "Line start" })
 vim.keymap.set("i", "<C-e>", "<End>", { desc = "Line end" })
 
 -- Disable macro recording (q key) - prevent accidental triggers
-vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording)" })
+vim.keymap.set({ "n", "x" }, "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording)" })
 
 -- Pick and save a colour theme (previews as you move through the list)
 vim.keymap.set("n", "<leader>uC", function()
   require("dojo.theme").pick()
 end, { desc = "Pick & save colorscheme" })
+
+-- Review a pull request (lua/dojo/review)
+vim.keymap.set("n", "<leader>gp", function()
+  require("dojo.review").pick()
+end, { desc = "Review a pull request" })
 
 -- Dojo: Cmd-key layer, cheatsheet, palette, projects (lua/dojo)
 require("dojo").setup()
